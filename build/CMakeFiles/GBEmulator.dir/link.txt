@@ -1,1 +1,0 @@
-/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/GBEmulator.dir/link.d CMakeFiles/GBEmulator.dir/src/main.cpp.o -o GBEmulator  /usr/lib/libSDL3.so.0.2.26 libimgui.a /usr/lib/libGLX.so /usr/lib/libOpenGL.so

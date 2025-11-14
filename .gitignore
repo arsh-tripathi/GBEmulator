@@ -1,2 +1,4 @@
 external/SDL
 external/imgui/examples
+build/
+emulator
