@@ -1,0 +1,4 @@
+/home/arsh/Projects/GBEmulator/build/CMakeFiles/GBEmulator.dir
+/home/arsh/Projects/GBEmulator/build/CMakeFiles/imgui.dir
+/home/arsh/Projects/GBEmulator/build/CMakeFiles/edit_cache.dir
+/home/arsh/Projects/GBEmulator/build/CMakeFiles/rebuild_cache.dir
