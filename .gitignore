@@ -2,3 +2,5 @@ external/SDL
 external/imgui/examples
 build/
 emulator
+.cache
+compile_commands.json
