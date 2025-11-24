@@ -1,0 +1,110 @@
+// ----------------------------
+//          BLOCK 0
+// ----------------------------
+OP(NOP           , 0b00000000)
+
+OP(LDR16IMM16    , 0b00000001)
+OP(LDR16MEMA     , 0b00000010)
+OP(LDAR16MEM     , 0b00001010)
+OP(LDIMM16SP     , 0b00001000)
+
+OP(INCR16        , 0b00000011)
+OP(DECR16        , 0b00001011)
+OP(ADDHLR16      , 0b00001001)
+
+OP(INCR8         , 0b00000100)
+OP(DECR8         , 0b00000101)
+
+OP(LDR8IMM8      , 0b00000110)
+
+OP(RLCA          , 0b00000111)
+OP(RRCA          , 0b00001111)
+OP(RLA           , 0b00010111)
+OP(RRA           , 0b00011111)
+OP(DAA           , 0b00100111)
+OP(CPL           , 0b00101111)
+OP(SCFA          , 0b00110111)
+OP(CCF           , 0b00111111)
+
+OP(JRIMM8        , 0b00011000)
+OP(JRCONDIMM8    , 0b00100000)
+
+OP(STOP          , 0b00010000)
+
+// ----------------------------
+//          BLOCK 1
+// ----------------------------
+OP(LDR8R8        , 0b01000000)
+
+OP(HALT          , 0b01110110)
+
+// ----------------------------
+//          BLOCK 2
+// ----------------------------
+OP(ADDAR8        , 0b10000000)
+OP(ADCAR8        , 0b10001000)
+OP(SUBAR8        , 0b10010000)
+OP(SBCAR8        , 0b10011000)
+OP(ANDAR8        , 0b10100000)
+OP(XORAR8        , 0b10101000)
+OP(CPAR8         , 0b10111000)
+
+// ----------------------------
+//          BLOCK 3
+// ----------------------------
+OP(ADDAIMM8      , 0b11000110)
+OP(ADCAIMM8      , 0b11001110)
+OP(SUBAIMM8      , 0b11010110)
+OP(SBCAIMM8      , 0b11011110)
+OP(ANDAIMM8      , 0b11100110)
+OP(XORAIMM8      , 0b11101110)
+OP(ORAIMM8       , 0b11110110)
+OP(CPAIMM8       , 0b11111110)
+
+OP(RETCOND       , 0b11000000)
+OP(RET           , 0b11001001)
+OP(RETI          , 0b11011001)
+OP(JPCONDIMM16   , 0b11000010)
+OP(JPIMM16       , 0b11000011)
+OP(JPHL          , 0b11101001)
+OP(CALLCONDIMM16 , 0b11000100)
+OP(CALLIMM16     , 0b11001101)
+OP(RSTTGT3       , 0b11000111)
+
+OP(POPR16STK     , 0b11000001)
+OP(PUSHR16STK    , 0b11000101)
+
+OP(LDHCA         , 0b11100010)
+OP(LDFIMM8A      , 0b11100000)
+OP(LDIMM16A      , 0b11101010)
+OP(LDHAC         , 0b11110010)
+OP(LDHAIMM8      , 0b11110000)
+OP(LDAIMM16      , 0b11111010)
+
+OP(ADDSPIMM8     , 0b11101000)
+OP(LDHLSPIMM8    , 0b11111000)
+OP(LDSPHL        , 0b11111001)
+
+OP(DI            , 0b11110011)
+OP(EI            , 0b11111011)
+
+// ----------------------------
+//          BLOCK 4
+// ----------------------------
+OP(CB            , 0b1101011)
+
+#ifdef CBINSTS
+OP(RLCR8         , 0b00000000)
+OP(RRCR8         , 0b00001000)
+OP(RLR8          , 0b00010000)
+OP(RRR8          , 0b00010000)
+OP(SLAR8         , 0b00100000)
+OP(SRAR8         , 0b00101000)
+OP(SWAPR8        , 0b00110000)
+OP(SRLR8         , 0b00111000)
+
+OP(BITB3R8       , 0b01000000)
+OP(RESB3R8       , 0b10000000)
+OP(SETB3R8       , 0b11000000)
+#endif
+
