@@ -57,6 +57,23 @@ class GBCPU {
             bool unSetN() { return af & ~n; }
             bool unSetH() { return af & ~h; }
             bool unSetC() { return af & ~c; }
+
+            enum FLAG {
+                f_Z, f_N, f_H, f_C
+            };
+
+            void set(FLAG f, bool state) {
+                switch (f) {
+                    case f_Z: 
+                        if (state) setZ(); else unSetZ();
+                    case f_N: 
+                        if (state) setN(); else unSetN();
+                    case f_H: 
+                        if (state) setH(); else unSetH();
+                    case f_C: 
+                        if (state) setC(); else unSetC();
+                }
+            }
           
             uint16_t parseInstruction(GBMEM &mem, uint16_t address);
 
