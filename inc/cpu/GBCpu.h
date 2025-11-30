@@ -1,12 +1,15 @@
 #pragma once
 
 #include <cstdint>
-#include <map>
 #include <memory/GBMemory.h>
 #include <array>
 
 class GBCPU {
       public:
+
+            GBCPU() = default;
+            ~GBCPU() = default;
+
             // REGISTERS
             static const uint8_t z = 1 << 7;
             static const uint8_t n = 1 << 6;
@@ -105,7 +108,7 @@ class GBCPU {
                 for (int i = 0; i < 256; ++i) {
                     bool mapped = false;
                     for (InstMask mask: instructionList) {
-                        if (i & mask == mask) {
+                        if ((i & mask) == mask) {
                             table[i] = mapInst(mask);
                             mapped = true; 
                             break;

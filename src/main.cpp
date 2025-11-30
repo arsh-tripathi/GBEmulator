@@ -1,3 +1,4 @@
+#include <string>
 #define SDL_MAIN_USE_CALLBACKS 1
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -7,10 +8,13 @@
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_opengl3.h>
 
+#include <cpu/GBCpu.h>
+
 static SDL_Window *window = nullptr;
 SDL_GLContext gl_context;
 bool show_demo_window = false;
 bool show_another_window = true;
+bool show_register_info = true;
 ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 ImGuiIO *io;
 
@@ -42,7 +46,7 @@ SDL_AppResult SDL_AppInit(void **, int, char **) {
 
     float main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
     SDL_WindowFlags window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY;
-    window = SDL_CreateWindow("Dear ImGui SDL3+OpenGL3 example", (int)(1280 * main_scale), (int)(800 * main_scale), window_flags);
+    window = SDL_CreateWindow("Dear ImGui SDL3+OpenGL3 example", (int)(500 * main_scale), (int)(500 * main_scale), window_flags);
     if (window == nullptr)
     {
         SDL_Log("Error: SDL_CreateWindow(): %s\n", SDL_GetError());
@@ -134,6 +138,7 @@ SDL_AppResult SDL_AppIterate(void *)
         ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
         ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
         ImGui::Checkbox("Another Window", &show_another_window);
+        ImGui::Checkbox("Register Info", &show_another_window);
 
         ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
         ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
@@ -155,6 +160,16 @@ SDL_AppResult SDL_AppIterate(void *)
         ImGui::Text("Hello from another window!");
         if (ImGui::Button("Close Me"))
             show_another_window = false;
+        ImGui::End();
+    }
+
+    if (show_register_info)
+    {
+        static GBCPU cpu;
+        ImGui::Begin("Register Info", &show_register_info);
+        ImGui::Text("R16");
+        if (ImGui::Button("Close Me"))
+            show_register_info = false;
         ImGui::End();
     }
 
