@@ -85,7 +85,7 @@ class GBCPU {
             #undef OP
 
             #define OP(a, b) a,
-            constexpr static std::array<InstMask, 73> instructionList = {
+            constexpr static std::array<InstMask, 74> instructionList = {
                 #include <cpu/opcodes.def>
             };
             #undef OP
@@ -118,6 +118,8 @@ class GBCPU {
 
         private:
             uint16_t af, bc, de, hl, SP, PC;
+            bool IME = false;
+            uint8_t IME_scheduled = 0;
 
             enum R8 {
                 r8_B  = 0,
@@ -156,6 +158,10 @@ class GBCPU {
                 cond_Z  = 1,
                 cond_NC = 2,
                 cond_C  = 3,
+            };
+
+            std::array<uint8_t, 8> vec = {
+                0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38
             };
 
             uint16_t readR16(R16 reg);
@@ -216,6 +222,7 @@ class GBCPU {
             uint16_t handleSBCAR8(GBMEM& mem, uint16_t address);
             uint16_t handleANDAR8(GBMEM& mem, uint16_t address);
             uint16_t handleXORAR8(GBMEM& mem, uint16_t address);
+            uint16_t handleORAR8(GBMEM& mem, uint16_t address);
             uint16_t handleCPAR8(GBMEM& mem, uint16_t address);
 
             // ----------------------------
@@ -244,7 +251,7 @@ class GBCPU {
             uint16_t handlePUSHR16STK(GBMEM& mem, uint16_t address);
 
             uint16_t handleLDHCA(GBMEM& mem, uint16_t address);
-            uint16_t handleLDFIMM8A(GBMEM& mem, uint16_t address);
+            uint16_t handleLDHIMM8A(GBMEM& mem, uint16_t address);
             uint16_t handleLDIMM16A(GBMEM& mem, uint16_t address);
             uint16_t handleLDHAC(GBMEM& mem, uint16_t address);
             uint16_t handleLDHAIMM8(GBMEM& mem, uint16_t address);

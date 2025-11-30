@@ -439,8 +439,30 @@ uint16_t GBCPU::handleXORAR8(GBMEM& mem, uint16_t address) {
     return address + 1;
 }
 
+uint16_t GBCPU::handleORAR8(GBMEM& mem, uint16_t address) {
+    uint8_t inst = mem.read8(address);
+    R8 reg = static_cast<R8>(inst & 0b00000111);
+    uint8_t a = A();
+    uint8_t val = readR8(reg);
+    uint8_t result = a | val;
+    set(f_Z, result == 0);
+    set(f_H, true);
+    Log::d("ORAR8: Set A to the bitwise result of or "
+           "with r8_" + std::to_string(reg), LOG_TAG);
+    return address + 1;
+}
+
 uint16_t GBCPU::handleCPAR8(GBMEM& mem, uint16_t address) {
-    Log::d("CPAR8 Instruction", LOG_TAG);
+    uint8_t inst = mem.read8(address);
+    R8 reg = static_cast<R8>(inst & 0b00000111);
+    uint8_t a = A();
+    uint8_t val = readR8(reg);
+    set(f_Z, a - val == 0);
+    set(f_N, 1);
+    set(f_H, (a & 0xF) < (val & 0xF));
+    set(f_C, val > a);
+    Log::d("CPAR8: Compare value in A with r8_"
+           + std::to_string(reg), LOG_TAG);
     return address + 1;
 }
 
@@ -448,128 +470,325 @@ uint16_t GBCPU::handleCPAR8(GBMEM& mem, uint16_t address) {
 //          BLOCK 3
 // ----------------------------
 uint16_t GBCPU::handleADDAIMM8(GBMEM& mem, uint16_t address) {
-    Log::d("ADDAIMM8 Instruction", LOG_TAG);
-    return address + 1;
+    uint8_t a = A();
+    uint8_t val = mem.read8(address + 1);
+    uint8_t result = a + val;
+    A(result);
+    set(f_Z, result == 0);
+    set(f_N, false);
+    bool overflow3 = ((a & 0b111) + (val & 0b111)) > 0b111;
+    bool overflow7 = ((a & 0b1111111) + (val & 0b1111111)) > 0b1111111;
+    set(f_H, overflow3);
+    set(f_C, overflow7);
+    Log::d("ADDAIMM8: Add " + std::to_string(val) + " to A", LOG_TAG);
+    return address + 2;
 }
+
 uint16_t GBCPU::handleADCAIMM8(GBMEM& mem, uint16_t address) {
-    Log::d("ADCAIMM8 Instruction", LOG_TAG);
-    return address + 1;
+    uint8_t a = A();
+    uint8_t val = mem.read8(address + 1);
+    uint8_t carry = hasC();
+    uint8_t result = a + val + carry;
+    A(result);
+    set(f_Z, result == 0);
+    set(f_N, false);
+    bool overflow3 = ((a & 0b111) + (val & 0b111) + carry) > 0b111;
+    bool overflow7 = ((a & 0b1111111) + (val & 0b1111111) + carry) > 0b1111111;
+    set(f_H, overflow3);
+    set(f_C, overflow7);
+    Log::d("ADCAIMM88: Add " + std::to_string(val)
+          + " and C" + std::to_string(carry) + " to A", LOG_TAG);
+    return address + 2;
 }
+
 uint16_t GBCPU::handleSUBAIMM8(GBMEM& mem, uint16_t address) {
-    Log::d("SUBAIMM8 Instruction", LOG_TAG);
-    return address + 1;
+    uint8_t a = A();
+    uint8_t val = mem.read8(address + 1);
+    uint8_t result = a - val;
+    A(result);
+    set(f_Z, result == 0);
+    set(f_N, false);
+    bool borrow3 = ((a & 0b111) - (val & 0b111)) < 0;
+    bool borrow7 = ((a & 0b1111111) - (val & 0b1111111)) < 0;
+    set(f_H, borrow3);
+    set(f_C, borrow7);
+    Log::d("SUBAIMM8: Sub " + std::to_string(val) + " to A", LOG_TAG);
+    return address + 2;
 }
+
 uint16_t GBCPU::handleSBCAIMM8(GBMEM& mem, uint16_t address) {
-    Log::d("SBCAIMM8 Instruction", LOG_TAG);
-    return address + 1;
+    uint8_t a = A();
+    uint8_t val = mem.read8(address + 1);
+    uint8_t carry = hasC();
+    uint8_t result = a - val - carry;
+    A(result);
+    set(f_Z, result == 0);
+    set(f_N, false);
+    bool borrow3 = ((a & 0b111) - (val & 0b111) - carry) < 0;
+    bool borrow7 = ((a & 0b1111111) - (val & 0b1111111) - carry) < 0;
+    set(f_H, borrow3);
+    set(f_C, borrow7);
+    Log::d("SBCAIMM8: Sub " + std::to_string(val) + " and C" + 
+           std::to_string(carry) + " to A", LOG_TAG);
+    return address + 2;
 }
+
 uint16_t GBCPU::handleANDAIMM8(GBMEM& mem, uint16_t address) {
-    Log::d("ANDAIMM8 Instruction", LOG_TAG);
-    return address + 1;
+    uint8_t a = A();
+    uint8_t val = mem.read8(address + 1);
+    uint8_t result = a & val;
+    set(f_Z, result == 0);
+    set(f_H, true);
+    Log::d("ANDAIMM8: Set A to the bitwise result of and "
+           "with " + std::to_string(val), LOG_TAG);
+    return address + 2;
 }
+
 uint16_t GBCPU::handleXORAIMM8(GBMEM& mem, uint16_t address) {
-    Log::d("XORAIMM8 Instruction", LOG_TAG);
-    return address + 1;
+    uint8_t a = A();
+    uint8_t val = mem.read8(address + 1);
+    uint8_t result = a ^ val;
+    set(f_Z, result == 0);
+    set(f_H, true);
+    Log::d("XORAIMM8: Set A to the bitwise result of xor "
+           "with " + std::to_string(val), LOG_TAG);
+    return address + 2;
 }
+
 uint16_t GBCPU::handleORAIMM8(GBMEM& mem, uint16_t address) {
-    Log::d("ORAIMM8 Instruction", LOG_TAG);
-    return address + 1;
+    uint8_t a = A();
+    uint8_t val = mem.read8(address + 1);
+    uint8_t result = a | val;
+    set(f_Z, result == 0);
+    set(f_H, true);
+    Log::d("ORAIMM8: Set A to the bitwise result of or "
+           "with " + std::to_string(val), LOG_TAG);
+    return address + 2;
 }
+
 uint16_t GBCPU::handleCPAIMM8(GBMEM& mem, uint16_t address) {
-    Log::d("CPAIMM8 Instruction", LOG_TAG);
-    return address + 1;
+    uint8_t a = A();
+    uint8_t val = mem.read8(address + 1);
+    set(f_Z, a - val == 0);
+    set(f_N, 1);
+    set(f_H, (a & 0xF) < (val & 0xF));
+    set(f_C, val > a);
+    Log::d("CPAIMM8: Compare value in A with r8_"
+           + std::to_string(val), LOG_TAG);
+    return address + 2;
 }
 
 uint16_t GBCPU::handleRETCOND(GBMEM& mem, uint16_t address) {
-    Log::d("RETCOND Instruction", LOG_TAG);
-    return address + 1;
+    uint8_t inst = mem.read8(address);
+    COND cond = static_cast<COND>((inst & 0b00011000) >> 3);
+    if (hasCond(cond)) {
+        uint8_t l8 = mem.read8(SP);
+        SP += 1;
+        uint8_t h8 = mem.read8(SP);
+        SP += 1;
+        uint16_t ret = (h8 << 8) + l8;
+        Log::d("RETCOND: Taken to " + std::to_string(ret), LOG_TAG);
+        return ret;
+    } else {
+        return address + 1;
+    }
 }
+
 uint16_t GBCPU::handleRET(GBMEM& mem, uint16_t address) {
-    Log::d("RET Instruction", LOG_TAG);
-    return address + 1;
+    uint16_t ret = mem.read16(SP);
+    SP += 2;
+    Log::d("RET: Return to " + std::to_string(ret), LOG_TAG);
+    return ret;
 }
+
 uint16_t GBCPU::handleRETI(GBMEM& mem, uint16_t address) {
-    Log::d("RETI Instruction", LOG_TAG);
-    return address + 1;
+    uint16_t ret = mem.read16(SP);
+    SP += 2;
+    IME_scheduled = 2;
+    Log::d("RETI: Return to " + std::to_string(ret), LOG_TAG);
+    return ret;
 }
+
 uint16_t GBCPU::handleJPCONDIMM16(GBMEM& mem, uint16_t address) {
-    Log::d("JPCONDIMM16 Instruction", LOG_TAG);
-    return address + 1;
+    uint8_t inst = mem.read8(address);
+    COND cond = static_cast<COND>((inst & 0b00011000) >> 3);
+    if (hasCond(cond)) {
+        uint16_t nextAdd = mem.read16(address + 1);
+        Log::d("JPCONDIMM16: Jump to " + std::to_string(nextAdd), LOG_TAG);
+        return nextAdd;
+    } else {
+        Log::d("JPCONDIMM16: Skip jump", LOG_TAG);
+        return address + 3;
+    }
 }
+
 uint16_t GBCPU::handleJPIMM16(GBMEM& mem, uint16_t address) {
-    Log::d("JPIMM16 Instruction", LOG_TAG);
-    return address + 1;
+    uint16_t nextAdd = mem.read16(address + 1);
+    Log::d("JPIMM16: Jump to " + std::to_string(nextAdd), LOG_TAG);
+    return nextAdd;
 }
+
 uint16_t GBCPU::handleJPHL(GBMEM& mem, uint16_t address) {
-    Log::d("JPHL Instruction", LOG_TAG);
-    return address + 1;
+    uint16_t nextAdd = HL();
+    Log::d("JPHL: Jump to " + std::to_string(nextAdd), LOG_TAG);
+    return nextAdd;
 }
+
 uint16_t GBCPU::handleCALLCONDIMM16(GBMEM& mem, uint16_t address) {
-    Log::d("CALLCONDIMM16 Instruction", LOG_TAG);
-    return address + 1;
+    uint8_t inst = mem.read8(address);
+    COND cond = static_cast<COND>((inst & 0b00011000) >> 3);
+    if (hasCond(cond)) {
+        uint16_t nextInstAdd = address + 3;
+        SP -= 2;
+        mem.store16(SP, nextInstAdd);
+        uint16_t nextAdd = mem.read16(address + 1);
+        Log::d("CALLCONDIMM16: Calling " + std::to_string(nextAdd) +
+               " from " + std::to_string(nextInstAdd), LOG_TAG);
+        return nextAdd;
+    } else {
+        Log::d("CALLCONDIMM16: Skipping call", LOG_TAG);
+        return address + 3;
+    }
 }
+
 uint16_t GBCPU::handleCALLIMM16(GBMEM& mem, uint16_t address) {
-    Log::d("CALLIMM16 Instruction", LOG_TAG);
-    return address + 1;
+    uint16_t nextInstAdd = address + 3;
+    SP -= 2;
+    mem.store16(SP, nextInstAdd);
+    uint16_t nextAdd = mem.read16(address + 1);
+    Log::d("CALLIMM16: Calling " + std::to_string(nextAdd) +
+           " from " + std::to_string(nextInstAdd), LOG_TAG);
+    return nextAdd;
 }
+
 uint16_t GBCPU::handleRSTTGT3(GBMEM& mem, uint16_t address) {
-    Log::d("RSTTGT3 Instruction", LOG_TAG);
-    return address + 1;
+    uint8_t inst = mem.read8(address);
+    uint8_t vecInd = (inst & 0b00111000) >> 3;
+    uint16_t nextInstAdd = address + 1;
+    SP -= 2;
+    uint8_t nextAdd = vec[vecInd];
+    mem.store16(SP, nextInstAdd);
+    Log::d("RSTTGT3: Calling " + std::to_string(nextAdd) + 
+           " from" + std::to_string(nextInstAdd), LOG_TAG);
+    return nextAdd;
 }
 
 uint16_t GBCPU::handlePOPR16STK(GBMEM& mem, uint16_t address) {
-    Log::d("POPR16STK Instruction", LOG_TAG);
+    uint8_t inst = mem.read8(address);
+    R16 r16 = static_cast<R16>((inst & 0b00110000) >> 3);
+    uint16_t sp = mem.read16(SP);
+    storeR16(r16, sp);
+    SP += 2;
+    Log::d("POPR16STK: Popping " + std::to_string(sp) +
+           " ([SP]) into r16" + std::to_string(r16), LOG_TAG);
     return address + 1;
 }
+
 uint16_t GBCPU::handlePUSHR16STK(GBMEM& mem, uint16_t address) {
-    Log::d("PUSHR16STK Instruction", LOG_TAG);
+    uint8_t inst = mem.read8(address);
+    R16 r16 = static_cast<R16>((inst & 0b00110000) >> 3);
+    uint16_t data = readR16(r16);
+    SP -= 2;
+    mem.store16(SP, data);
+    Log::d("PUSHR16STK: Pushing " + std::to_string(data) +
+           " to [SP] from r16" + std::to_string(r16), LOG_TAG);
     return address + 1;
 }
 
 uint16_t GBCPU::handleLDHCA(GBMEM& mem, uint16_t address) {
-    Log::d("LDHCA Instruction", LOG_TAG);
-    return address + 1;
-}
-uint16_t GBCPU::handleLDFIMM8A(GBMEM& mem, uint16_t address) {
-    Log::d("LDFIMM8A Instruction", LOG_TAG);
-    return address + 1;
-}
-uint16_t GBCPU::handleLDIMM16A(GBMEM& mem, uint16_t address) {
-    Log::d("LDIMM16A Instruction", LOG_TAG);
-    return address + 1;
-}
-uint16_t GBCPU::handleLDHAC(GBMEM& mem, uint16_t address) {
-    Log::d("LDHAC Instruction", LOG_TAG);
-    return address + 1;
-}
-uint16_t GBCPU::handleLDHAIMM8(GBMEM& mem, uint16_t address) {
-    Log::d("LDHAIMM8 Instruction", LOG_TAG);
-    return address + 1;
-}
-uint16_t GBCPU::handleLDAIMM16(GBMEM& mem, uint16_t address) {
-    Log::d("LDAIMM16 Instruction", LOG_TAG);
+    uint8_t cVal = C();
+    uint8_t a = A();
+    mem.store8(0xFF00 + cVal, a);
+    Log::d("LDHCA: Store data " + std::to_string(a) + 
+           " from A to 0xFF00 + " + std::to_string(cVal), LOG_TAG);
     return address + 1;
 }
 
+uint16_t GBCPU::handleLDHIMM8A(GBMEM& mem, uint16_t address) {
+    uint8_t n8 = mem.read8(address + 1);
+    uint8_t a = A();
+    mem.store8(0xFF00 + n8, a);
+    Log::d("LDHIMM8A: Store data " + std::to_string(a) + 
+           " from A to 0xFF00 + " + std::to_string(n8), LOG_TAG);
+    return address + 2;
+}
+
+uint16_t GBCPU::handleLDIMM16A(GBMEM& mem, uint16_t address) {
+    uint8_t n16 = mem.read16(address + 1);
+    uint8_t a = A();
+    mem.store8(n16, a);
+    Log::d("LDIMM16A: Store data " + std::to_string(a) + 
+           " from A to + " + std::to_string(n16), LOG_TAG);
+    return address + 3;
+}
+
+uint16_t GBCPU::handleLDHAC(GBMEM& mem, uint16_t address) {
+    uint8_t cVal = C();
+    uint8_t data = mem.read8(0xFF00 + cVal);
+    A(data);
+    Log::d("LDHAC: Load data " + std::to_string(data) + 
+           " to A from 0xFF00 + " + std::to_string(cVal), LOG_TAG);
+    return address + 1;
+}
+
+uint16_t GBCPU::handleLDHAIMM8(GBMEM& mem, uint16_t address) {
+    uint8_t n8 = mem.read8(address + 1);
+    uint8_t data = mem.read8(0xFF00 + n8);
+    A(data);
+    Log::d("LDHAIMM8: Load data " + std::to_string(data) + 
+           " to A from 0xFF00 + " + std::to_string(n8), LOG_TAG);
+    return address + 2;
+}
+
+uint16_t GBCPU::handleLDAIMM16(GBMEM& mem, uint16_t address) {
+    uint8_t n16 = mem.read16(address + 1);
+    uint8_t data = mem.read8(n16);
+    A(data);
+    Log::d("LDAIMM16: Load data " + std::to_string(data) + 
+           " to A from 0xFF00 + " + std::to_string(n16), LOG_TAG);
+    return address + 3;
+}
+
 uint16_t GBCPU::handleADDSPIMM8(GBMEM& mem, uint16_t address) {
-    Log::d("ADDSPIMM8 Instruction", LOG_TAG);
-    return address + 1;
+    int8_t e8 = static_cast<int8_t>(mem.read8(address + 1));
+    SP += e8;
+    set(f_Z, 0);
+    set(f_N, 0);
+    set(f_H, (SP & 0b111) + (e8 & 0b111) > 0b111);
+    set(f_H, (SP & 0b1111111) + (e8 & 0b1111111) > 0b1111111);
+    Log::d("ADDSPIMM8: Add " + std::to_string(e8) + " to SP", LOG_TAG);
+    return address + 2;
 }
+
 uint16_t GBCPU::handleLDHLSPIMM8(GBMEM& mem, uint16_t address) {
-    Log::d("LDHLSPIMM8 Instruction", LOG_TAG);
-    return address + 1;
+    int8_t e8 = static_cast<int8_t>(mem.read8(address + 1));
+    SP += e8;
+    set(f_Z, 0);
+    set(f_N, 0);
+    set(f_H, (SP & 0b111) + (e8 & 0b111) > 0b111);
+    set(f_H, (SP & 0b1111111) + (e8 & 0b1111111) > 0b1111111);
+    HL(SP);
+    Log::d("LDHLSPIMM8: Add " + std::to_string(e8) + " to SP", LOG_TAG);
+    return address + 2;
 }
+
 uint16_t GBCPU::handleLDSPHL(GBMEM& mem, uint16_t address) {
-    Log::d("LDSPHL Instruction", LOG_TAG);
+    SP = HL();
+    Log::d("LDSPHL: Load " + std::to_string(HL()) 
+           + "into SP", LOG_TAG);
     return address + 1;
 }
 
 uint16_t GBCPU::handleDI(GBMEM& mem, uint16_t address) {
-    Log::d("DI Instruction", LOG_TAG);
+    IME = false;
+    IME_scheduled = 0;
+    Log::d("DI: Clear IME flag", LOG_TAG);
     return address + 1;
 }
+
 uint16_t GBCPU::handleEI(GBMEM& mem, uint16_t address) {
-    Log::d("EI Instruction", LOG_TAG);
+    IME_scheduled = 1;
+    Log::d("EI: Set IME flag after next inst", LOG_TAG);
     return address + 1;
 }
 
