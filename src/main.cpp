@@ -1,4 +1,3 @@
-#include <string>
 #define SDL_MAIN_USE_CALLBACKS 1
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -7,6 +6,9 @@
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_opengl3.h>
+
+#include <bitset>
+#include <string>
 
 #include <cpu/GBCpu.h>
 
@@ -138,7 +140,7 @@ SDL_AppResult SDL_AppIterate(void *)
         ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
         ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
         ImGui::Checkbox("Another Window", &show_another_window);
-        ImGui::Checkbox("Register Info", &show_another_window);
+        ImGui::Checkbox("Register Info", &show_register_info);
 
         ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
         ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
@@ -167,9 +169,147 @@ SDL_AppResult SDL_AppIterate(void *)
     {
         static GBCPU cpu;
         ImGui::Begin("Register Info", &show_register_info);
-        ImGui::Text("R16");
-        if (ImGui::Button("Close Me"))
-            show_register_info = false;
+        if (ImGui::BeginTable("R16", 3, ImGuiTableFlags_Borders)) {
+            ImGui::TableSetupColumn("Reg");
+            ImGui::TableSetupColumn("Value");
+            ImGui::TableSetupColumn("Binary");
+            ImGui::TableHeadersRow();
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("AF");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d", cpu.AF());
+            ImGui::TableSetColumnIndex(2);
+            ImGui::Text("%s", std::bitset<16>(cpu.AF()).to_string().c_str());
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("BC");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d", cpu.BC());
+            ImGui::TableSetColumnIndex(2);
+            ImGui::Text("%s", std::bitset<16>(cpu.BC()).to_string().c_str());
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("DE");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d", cpu.DE());
+            ImGui::TableSetColumnIndex(2);
+            ImGui::Text("%s", std::bitset<16>(cpu.DE()).to_string().c_str());
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("HL");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d", cpu.HL());
+            ImGui::TableSetColumnIndex(2);
+            ImGui::Text("%s", std::bitset<16>(cpu.HL()).to_string().c_str());
+            ImGui::EndTable();
+        }
+        if (ImGui::BeginTable("R8", 3, ImGuiTableFlags_Borders)) {
+            ImGui::TableSetupColumn("Reg");
+            ImGui::TableSetupColumn("Value");
+            ImGui::TableSetupColumn("Binary");
+            ImGui::TableHeadersRow();
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("A");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d", cpu.A());
+            ImGui::TableSetColumnIndex(2);
+            ImGui::Text("%s", std::bitset<8>(cpu.A()).to_string().c_str());
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("F");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d", cpu.F());
+            ImGui::TableSetColumnIndex(2);
+            ImGui::Text("%s", std::bitset<8>(cpu.F()).to_string().c_str());
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("B");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d", cpu.B());
+            ImGui::TableSetColumnIndex(2);
+            ImGui::Text("%s", std::bitset<8>(cpu.B()).to_string().c_str());
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("C");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d", cpu.C());
+            ImGui::TableSetColumnIndex(2);
+            ImGui::Text("%s", std::bitset<8>(cpu.C()).to_string().c_str());
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("D");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d", cpu.D());
+            ImGui::TableSetColumnIndex(2);
+            ImGui::Text("%s", std::bitset<8>(cpu.D()).to_string().c_str());
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("E");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d", cpu.E());
+            ImGui::TableSetColumnIndex(2);
+            ImGui::Text("%s", std::bitset<8>(cpu.E()).to_string().c_str());
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("H");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d", cpu.H());
+            ImGui::TableSetColumnIndex(2);
+            ImGui::Text("%s", std::bitset<8>(cpu.H()).to_string().c_str());
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("L");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d", cpu.L());
+            ImGui::TableSetColumnIndex(2);
+            ImGui::Text("%s", std::bitset<8>(cpu.L()).to_string().c_str());
+            ImGui::EndTable();
+        }
+        if (ImGui::BeginTable("Flags", 2, ImGuiTableFlags_Borders)) {
+            ImGui::TableSetupColumn("Flag");
+            ImGui::TableSetupColumn("Enabled");
+            ImGui::TableHeadersRow();
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("Z");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d", cpu.hasZ());
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("N");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d", cpu.hasN());
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("H");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d", cpu.hasH());
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("C");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d", cpu.hasC());
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("IME");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d", cpu.IME);
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("IME Scheduled");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d", cpu.IME_scheduled);
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("LP Mode");
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%d", cpu.lowPowerMode);
+            ImGui::EndTable();
+        }
+        if (ImGui::Button("Set A to 1"))
+            cpu.A(cpu.A() + 1);
         ImGui::End();
     }
 

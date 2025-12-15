@@ -14,7 +14,8 @@ uint16_t GBCPU::parseInstruction(GBMEM& mem, uint16_t address) {
 }
 
 uint16_t GBCPU::handleInvalid(GBMEM& mem, uint16_t address) {
-    SDL_Log("[ERROR] [GBCPU] INVALID OPCODE %i RECEIVED AT %i", mem.read8(address), address);
+    Log::e("INVALID OPCODE " + std::to_string(mem.read8(address)) + 
+           " RECEIVED AT " + std::to_string(address), LOG_TAG);
     return address + 1;
 }
 
@@ -25,14 +26,15 @@ uint16_t GBCPU::readR16(R16 reg) {
         case r16_HL: return HL();
         case r16_SP: return SP;
     }
+    return 0;
 }
 
 void GBCPU::storeR16(R16 reg, uint16_t val) {
     switch (reg) {
-        case r16_BC: BC(val);
-        case r16_DE: DE(val);
-        case r16_HL: HL(val);
-        case r16_SP: SP = val;
+        case r16_BC: BC(val); break;
+        case r16_DE: DE(val); break;
+        case r16_HL: HL(val); break;
+        case r16_SP: SP = val; break;
     }
 }
 
@@ -47,18 +49,19 @@ uint8_t GBCPU::readR8(R8 reg) {
         case r8_L:  return L();
         case r8_HL: return HL();
     }
+    return 0;
 }
 
 void GBCPU::storeR8(R8 reg, uint8_t val) {
     switch (reg) {
-        case r8_A:  A(val);
-        case r8_B:  B(val);
-        case r8_C:  C(val);
-        case r8_D:  D(val);
-        case r8_E:  E(val);
-        case r8_H:  H(val);
-        case r8_L:  L(val);
-        case r8_HL: HL(val);
+        case r8_A:  A(val); break;
+        case r8_B:  B(val); break;
+        case r8_C:  C(val); break;
+        case r8_D:  D(val); break;
+        case r8_E:  E(val); break;
+        case r8_H:  H(val); break;
+        case r8_L:  L(val); break;
+        case r8_HL: HL(val); break;
     }
 }
 
@@ -69,6 +72,7 @@ bool GBCPU::hasCond(COND cond) {
         case cond_NC: return !hasC();
         case cond_C: return hasC();
     }
+    return false;
 }
 
 // ----------------------------
@@ -146,6 +150,7 @@ uint16_t GBCPU::handleADDHLR16(GBMEM& mem, uint16_t address) {
     R16 reg = static_cast<R16>((inst & 0b00110000) >> 4);
     uint16_t hl = HL();
     uint16_t r16 = readR16(reg);
+    HL(hl + r16);
     bool overflow11bit = ((hl & 0x0FFF) + (r16 & 0x0FFF)) > 0x0FFF;
     bool overflow15bit = (hl + r16) > 0xFFFF;
     set(f_N, false);
@@ -307,8 +312,9 @@ uint16_t GBCPU::handleJRCONDIMM8(GBMEM& mem, uint16_t address) {
     }
 }
 
-uint16_t GBCPU::handleSTOP(GBMEM& mem, uint16_t address) {
+uint16_t GBCPU::handleSTOP(GBMEM& , uint16_t address) {
     // TODO: FIX THIS INSTRUCTION
+    // uint8_t next = mem.read8(address + 1);
     Log::d("STOP", LOG_TAG);
     return address + 2;
 }
@@ -327,10 +333,11 @@ uint16_t GBCPU::handleLDR8R8(GBMEM& mem, uint16_t address) {
     return address + 1;
 }
 
-uint16_t GBCPU::handleHALT(GBMEM& mem, uint16_t address) {
+uint16_t GBCPU::handleHALT(GBMEM& , uint16_t address) {
     // TODO: Handle this instruction along with STOP
     //       Need to handle interrupts
     Log::d("HALT Instruction", LOG_TAG);
+    lowPowerMode = true;
     return address + 1;
 }
 
@@ -797,17 +804,17 @@ uint16_t GBCPU::handleEI(GBMEM&, uint16_t address) {
 // ----------------------------
 uint16_t GBCPU::handleCB(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address + 1);
-    if ((inst & RLCR8)   == RLCR8)   return handleRLCR8(mem, address + 1);
-    if ((inst & RRCR8)   == RRCR8)   return handleRRCR8(mem, address + 1);
-    if ((inst & RLR8)    == RLR8)    return handleRLR8(mem, address + 1);
-    if ((inst & RRR8)    == RRR8)    return handleRRR8(mem, address + 1);
-    if ((inst & SLAR8)   == SLAR8)   return handleSLAR8(mem, address + 1);
-    if ((inst & SRAR8)   == SRAR8)   return handleSRAR8(mem, address + 1);
-    if ((inst & SWAPR8)  == SWAPR8)  return handleSWAPR8(mem, address + 1);
-    if ((inst & SRLR8)   == SRLR8)   return handleSRLR8(mem, address + 1);
-    if ((inst & BITB3R8) == BITB3R8) return handleBITB3R8(mem, address + 1);
-    if ((inst & RESB3R8) == RESB3R8) return handleRESB3R8(mem, address + 1);
-    if ((inst & SETB3R8) == SETB3R8) return handleSETB3R8(mem, address + 1);
+    if ((inst & RLCR8)   == 0b11111000) return handleRLCR8(mem, address + 1);
+    if ((inst & RRCR8)   == 0b11111000) return handleRRCR8(mem, address + 1);
+    if ((inst & RLR8)    == 0b11111000) return handleRLR8(mem, address + 1);
+    if ((inst & RRR8)    == 0b11111000) return handleRRR8(mem, address + 1);
+    if ((inst & SLAR8)   == 0b11111000) return handleSLAR8(mem, address + 1);
+    if ((inst & SRAR8)   == 0b11111000) return handleSRAR8(mem, address + 1);
+    if ((inst & SWAPR8)  == 0b11111000) return handleSWAPR8(mem, address + 1);
+    if ((inst & SRLR8)   == 0b11111000) return handleSRLR8(mem, address + 1);
+    if ((inst & BITB3R8) == 0b11000000) return handleBITB3R8(mem, address + 1);
+    if ((inst & RESB3R8) == 0b11000000) return handleRESB3R8(mem, address + 1);
+    if ((inst & SETB3R8) == 0b11000000) return handleSETB3R8(mem, address + 1);
     Log::d("CB: Invalid Instruction format", LOG_TAG);
     return address + 1;
 }

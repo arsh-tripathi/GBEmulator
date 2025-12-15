@@ -3,18 +3,36 @@ cmake_minimum_required(VERSION 3.7)
 project(GBEmulator)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(OpenGL_GL_PREFERENCE GLVND)
 
 find_package(SDL3 REQUIRED)
 find_package(OpenGL REQUIRED)
+
 include_directories(${SDL3_INCLUDE_DIRS})
 include_directories(inc)
 
-file(GLOB_RECURSE SOURCES src/*.cpp)
+# ---------------------
+# Core Library
+# ---------------------
+file(GLOB_RECURSE CORE_SOURCES 
+    src/cpu/*.cpp
+)
 
-add_executable(GBEmulator ${SOURCES} ${IMGUI_SRC})
-target_compile_options(GBEmulator PRIVATE -Wall -Wextra -Wpedantic)
+add_library(GBCore STATIC ${CORE_SOURCES})
 
+target_include_directories(GBCore
+    PUBLIC
+        inc/cpu
+        inc/memory
+        inc/utils
+)
+target_compile_options(GBCore PRIVATE -Wall -Wextra -Werror -Wpedantic)
+
+
+# ---------------------
+# ImGui Library
+# ---------------------
 add_library(imgui
     external/imgui/imgui.cpp
     external/imgui/imgui_draw.cpp
@@ -31,4 +49,25 @@ target_include_directories(imgui SYSTEM PUBLIC
 
 target_compile_options(imgui PRIVATE -w)
 
-target_link_libraries(GBEmulator ${SDL3_LIBRARIES} OpenGL::GL imgui)
+
+# ---------------------
+# Emulator executable
+# ---------------------
+add_executable(GBEmulator 
+    src/main.cpp
+)
+target_compile_options(GBEmulator PRIVATE -Wall -Wextra -Wpedantic)
+
+target_link_libraries(GBEmulator 
+    PRIVATE
+        SDL3::SDL3
+        OpenGL::GL 
+        imgui
+)
+
+# ---------------------
+# Testing
+# ---------------------
+enable_testing()
+add_subdirectory(tests)
+

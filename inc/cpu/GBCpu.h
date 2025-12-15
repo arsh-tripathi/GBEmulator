@@ -10,6 +10,9 @@ class GBCPU {
             GBCPU() = default;
             ~GBCPU() = default;
 
+            static const uint16_t IE = 0xFFFF;
+            static const uint16_t IF = 0xFF0F;
+
             // REGISTERS
             static const uint8_t z = 1 << 7;
             static const uint8_t n = 1 << 6;
@@ -17,13 +20,13 @@ class GBCPU {
             static const uint8_t c = 1 << 4;
 
             // GETTERS
-            uint8_t A() const { return af & 0xFF00; }
+            uint8_t A() const { return (af & 0xFF00) >> 8; }
             uint8_t F() const { return af & 0x00FF; }
-            uint8_t B() const { return bc & 0xFF00; }
+            uint8_t B() const { return (bc & 0xFF00) >> 8; }
             uint8_t C() const { return bc & 0x00FF; }
-            uint8_t D() const { return de & 0xFF00; }
+            uint8_t D() const { return (de & 0xFF00) >> 8; }
             uint8_t E() const { return de & 0x00FF; }
-            uint8_t H() const { return hl & 0xFF00; }
+            uint8_t H() const { return (hl & 0xFF00) >> 8; }
             uint8_t L() const { return hl & 0x00FF; }
 
             uint16_t AF() const { return af; }
@@ -32,14 +35,14 @@ class GBCPU {
             uint16_t HL() const { return hl; }
 
             // SETTERS
-            void A(const uint8_t & val) { af = af & 0x00FF + val << 8; }
-            void F(const uint8_t & val) { af = af & 0xFF00 + val; }
-            void B(const uint8_t & val) { bc = bc & 0x00FF + val << 8; }
-            void C(const uint8_t & val) { bc = bc & 0xFF00 + val; }
-            void D(const uint8_t & val) { de = de & 0x00FF + val << 8; }
-            void E(const uint8_t & val) { de = de & 0xFF00 + val; }
-            void H(const uint8_t & val) { hl = hl & 0x00FF + val << 8; }
-            void L(const uint8_t & val) { hl = hl & 0xFF00 + val; }
+            void A(const uint8_t & val) { af = (af & 0x00FF) + (val << 8); }
+            void F(const uint8_t & val) { af = (af & 0xFF00) + val; }
+            void B(const uint8_t & val) { bc = (bc & 0x00FF) + (val << 8); }
+            void C(const uint8_t & val) { bc = (bc & 0xFF00) + val; }
+            void D(const uint8_t & val) { de = (de & 0x00FF) + (val << 8); }
+            void E(const uint8_t & val) { de = (de & 0xFF00) + val; }
+            void H(const uint8_t & val) { hl = (hl & 0x00FF) + (val << 8); }
+            void L(const uint8_t & val) { hl = (hl & 0xFF00) + val; }
 
             void AF(const uint16_t & val) { af = val; }
             void BC(const uint16_t & val) { bc = val; }
@@ -69,36 +72,42 @@ class GBCPU {
                 switch (f) {
                     case f_Z: 
                         if (state) setZ(); else unSetZ();
+                        break;
                     case f_N: 
                         if (state) setN(); else unSetN();
+                        break;
                     case f_H: 
                         if (state) setH(); else unSetH();
+                        break;
                     case f_C: 
                         if (state) setC(); else unSetC();
+                        break;
                 }
             }
           
             uint16_t parseInstruction(GBMEM &mem, uint16_t address);
 
             #define CBINSTS
-            #define OP(a, b) a = b,
+            #define OP(a, b, c) a = b,
             enum InstMask: uint8_t {
                 #include<cpu/opcodes.def>
             };
             #undef OP
 
-            #define OP(a, b) a,
-            constexpr static std::array<InstMask, 74> instructionList = {
+            #define OP(a, b, c) std::pair{a, c},
+            constexpr static std::array<std::pair<InstMask, uint8_t>, 74> instructionList = {
                 #include <cpu/opcodes.def>
             };
             #undef OP
             #undef CBINSTS
 
             using Handler = uint16_t(GBCPU::*)(GBMEM&, uint16_t);
-            #define OP(a, b) case a: return &GBCPU::handle##a;
+            #define OP(a, b, c) case a: return &GBCPU::handle##a;
             constexpr static Handler mapInst(InstMask m) {
                 switch (m) {
                     #include <cpu/opcodes.def>
+                    default:
+                        return &GBCPU::handleInvalid;
                 }
             }
             #undef OP
@@ -107,9 +116,9 @@ class GBCPU {
                 std::array<Handler, 256> table{};
                 for (int i = 0; i < 256; ++i) {
                     bool mapped = false;
-                    for (InstMask mask: instructionList) {
-                        if ((i & mask) == mask) {
-                            table[i] = mapInst(mask);
+                    for (auto p: instructionList) {
+                        if ((i & p.second) == p.first) {
+                            table[i] = mapInst(p.first);
                             mapped = true; 
                             break;
                         }
@@ -118,11 +127,12 @@ class GBCPU {
                 }
                 return table;
             }
+            bool IME = false;
+            uint8_t IME_scheduled = 0;
+            bool lowPowerMode = false;
 
         private:
             uint16_t af, bc, de, hl, SP, PC;
-            bool IME = false;
-            uint8_t IME_scheduled = 0;
 
             enum R8 {
                 r8_B  = 0,
