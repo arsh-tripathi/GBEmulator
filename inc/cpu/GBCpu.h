@@ -54,15 +54,15 @@ class GBCPU {
             bool hasH() { return af & h; }
             bool hasC() { return af & c; }
 
-            bool setZ() { return af | z; }
-            bool setN() { return af | n; }
-            bool setH() { return af | h; }
-            bool setC() { return af | c; }
+            void setZ() { af = af | z; }
+            void setN() { af = af | n; }
+            void setH() { af = af | h; }
+            void setC() { af = af | c; }
 
-            bool unSetZ() { return af & ~z; }
-            bool unSetN() { return af & ~n; }
-            bool unSetH() { return af & ~h; }
-            bool unSetC() { return af & ~c; }
+            void unSetZ() { af = af & ~z; }
+            void unSetN() { af = af & ~n; }
+            void unSetH() { af = af & ~h; }
+            void unSetC() { af = af & ~c; }
 
             enum FLAG {
                 f_Z, f_N, f_H, f_C
@@ -93,13 +93,13 @@ class GBCPU {
                 #include<cpu/opcodes.def>
             };
             #undef OP
+            #undef CBINSTS
 
             #define OP(a, b, c) std::pair{a, c},
             constexpr static std::array<std::pair<InstMask, uint8_t>, 74> instructionList = {
                 #include <cpu/opcodes.def>
             };
             #undef OP
-            #undef CBINSTS
 
             using Handler = uint16_t(GBCPU::*)(GBMEM&, uint16_t);
             #define OP(a, b, c) case a: return &GBCPU::handle##a;
@@ -162,8 +162,8 @@ class GBCPU {
             enum R16MEM {
                 r16mem_BC  = 0,
                 r16mem_DE  = 1,
-                r16mem_HLP = 2,
-                r16mem_HLM = 3,
+                r16mem_HLI = 2,
+                r16mem_HLD = 3,
             };
 
             enum COND {
@@ -179,8 +179,11 @@ class GBCPU {
 
             uint16_t readR16(R16 reg);
             void storeR16(R16 reg, uint16_t val);
-            uint8_t readR8(R8 reg);
-            void storeR8(R8 reg, uint8_t val);
+            uint16_t readR16STK(R16STK reg);
+            void storeR16STK(R16STK reg, uint16_t val);
+            uint16_t readR16MEM(R16MEM reg);
+            uint8_t readR8(GBMEM &mem, R8 reg);
+            void storeR8(GBMEM &mem, R8 reg, uint8_t val);
             bool hasCond(COND cond);
 
             // INSTRUCTION HANDLERS

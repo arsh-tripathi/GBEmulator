@@ -14,7 +14,6 @@ TEST(CPUTest, NOOP) {
     ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
 }
 
-
 TEST(CPUTest, LDR16N16) {
     GBCPU cpu;
     GBMEM mem;
@@ -311,7 +310,6 @@ TEST(CPUTest, DAA_nNHnC) {
 TEST(CPUTest, DAA_nNH2nC) {
     GBCPU cpu;
     GBMEM mem;
-    cpu.setN();
     cpu.A(0xA);
     mem.store8(0x0, 0b00100111);
     ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
@@ -321,7 +319,6 @@ TEST(CPUTest, DAA_nNH2nC) {
 TEST(CPUTest, DAA_nNnHC) {
     GBCPU cpu;
     GBMEM mem;
-    cpu.setN();
     cpu.setC();
     cpu.A(0x1);
     mem.store8(0x0, 0b00100111);
@@ -333,7 +330,6 @@ TEST(CPUTest, DAA_nNnHC) {
 TEST(CPUTest, DAA_nNnHC2) {
     GBCPU cpu;
     GBMEM mem;
-    cpu.setN();
     cpu.A(0xA0);
     mem.store8(0x0, 0b00100111);
     ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
@@ -345,7 +341,6 @@ TEST(CPUTest, DAA_nNnHC2) {
 TEST(CPUTest, DAA_nNHC) {
     GBCPU cpu;
     GBMEM mem;
-    cpu.setN();
     cpu.setH();
     cpu.setC();
     cpu.A(0x1);
@@ -397,16 +392,16 @@ TEST(CPUTest, CCF_C0) {
 TEST(CPUTest, JRIMM8_PO) {
     GBCPU cpu;
     GBMEM mem;
-    mem.store8(0x2, 0b0001100);
-    mem.store8(0x3, 4);
+    mem.store8(0x2, 0b00011000);
+    mem.store8(0x3, 0b00000100);
     ASSERT_EQ(cpu.parseInstruction(mem, 0x2), 0x8);
 }
 
 TEST(CPUTest, JRIMM8_NO) {
     GBCPU cpu;
     GBMEM mem;
-    mem.store8(0x2, 0b0001100);
-    mem.store8(0x3, 0b1111110); // -2
+    mem.store8(0x2, 0b00011000);
+    mem.store8(0x3, 0b11111110); // -2
     ASSERT_EQ(cpu.parseInstruction(mem, 0x2), 0x2);
 }
 
@@ -435,7 +430,7 @@ TEST(CPUTest, STOP) {
     GBCPU cpu;
     GBMEM mem;
     mem.store8(0x0, 0b00010000);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x3);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
     SKIP;
 }
 
@@ -448,7 +443,7 @@ TEST(CPUTest, LDR8R8) {
     GBCPU cpu;
     GBMEM mem;
     cpu.C(0x1);
-    mem.store8(0x0, 0b0100001);
+    mem.store8(0x0, 0b01000001);
     ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
     ASSERT_EQ(cpu.B(), 0x1);
 }
@@ -471,7 +466,7 @@ TEST(CPUTest, ADDAR8) {
     GBMEM mem;
     cpu.A(0xFF);
     cpu.B(0x1);
-    mem.store8(0x0, 0b1000000);
+    mem.store8(0x0, 0b10000000);
     ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
     ASSERT_EQ(cpu.A(), 0x00);
     ASSERT_TRUE(cpu.hasZ());
@@ -486,7 +481,7 @@ TEST(CPUTest, ADCAR8) {
     cpu.A(0xFE);
     cpu.B(0x1);
     cpu.setC();
-    mem.store8(0x0, 0b1000100);
+    mem.store8(0x0, 0b10001000);
     ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
     ASSERT_EQ(cpu.A(), 0x00);
     ASSERT_TRUE(cpu.hasZ());
@@ -498,52 +493,174 @@ TEST(CPUTest, ADCAR8) {
 TEST(CPUTest, SUBAR8) {
     GBCPU cpu;
     GBMEM mem;
-    mem.store8(0x0, 0b1001000);
+    cpu.B(0x0F);
+    cpu.A(0x10);
+    mem.store8(0x0, 0b10010000);
     ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    ASSERT_EQ(cpu.A(), 0x1);
+    ASSERT_TRUE(cpu.hasN());
+    ASSERT_TRUE(cpu.hasH());
+}
+
+TEST(CPUTest, SUBAR8_Z) {
+    GBCPU cpu;
+    GBMEM mem;
+    cpu.B(0x10);
+    cpu.A(0x10);
+    mem.store8(0x0, 0b10010000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    ASSERT_EQ(cpu.A(), 0x0);
+    ASSERT_TRUE(cpu.hasZ());
+}
+
+TEST(CPUTest, SUBAR8_C) {
+    GBCPU cpu;
+    GBMEM mem;
+    cpu.B(0x10);
+    cpu.A(0x0F);
+    mem.store8(0x0, 0b10010000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    ASSERT_EQ(cpu.A(), 0xFF);
+    ASSERT_TRUE(cpu.hasC());
 }
 
 // OP(SBCAR8        , 0b10011000, 0b11111000)
 TEST(CPUTest, SBCAR8) {
     GBCPU cpu;
     GBMEM mem;
-    mem.store8(0x0, 0b1001100);
+    cpu.B(0x0E);
+    cpu.setC();
+    cpu.A(0x10);
+    mem.store8(0x0, 0b10011000);
     ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    ASSERT_EQ(cpu.A(), 0x1);
+    ASSERT_TRUE(cpu.hasN());
+    ASSERT_TRUE(cpu.hasH());
+}
+
+TEST(CPUTest, SBCAR8_Z) {
+    GBCPU cpu;
+    GBMEM mem;
+    cpu.B(0x0F);
+    cpu.setC();
+    cpu.A(0x10);
+    mem.store8(0x0, 0b10011000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    ASSERT_EQ(cpu.A(), 0x0);
+    ASSERT_TRUE(cpu.hasZ());
+}
+
+TEST(CPUTest, SBCAR8_C) {
+    GBCPU cpu;
+    GBMEM mem;
+    cpu.B(0x10);
+    cpu.A(0x0F);
+    mem.store8(0x0, 0b10011000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    ASSERT_EQ(cpu.A(), 0xFF);
+    ASSERT_TRUE(cpu.hasC());
 }
 
 // OP(ANDAR8        , 0b10100000, 0b11111000)
 TEST(CPUTest, ANDAR8) {
     GBCPU cpu;
     GBMEM mem;
-    mem.store8(0x0, 0b1010000);
+    cpu.A(0b10101100);
+    cpu.B(0b11001010);
+    mem.store8(0x0, 0b10100000);
     ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    ASSERT_EQ(cpu.A(), 0b10001000);
+    ASSERT_TRUE(cpu.hasH());
 }
+
+TEST(CPUTest, ANDAR8_Z) {
+    GBCPU cpu;
+    GBMEM mem;
+    cpu.A(0b10101100);
+    cpu.B(0b01010011);
+    mem.store8(0x0, 0b10100000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    ASSERT_EQ(cpu.A(), 0);
+    ASSERT_TRUE(cpu.hasZ());
+}
+
 // OP(XORAR8        , 0b10101000, 0b11111000)
 TEST(CPUTest, XORAR8) {
     GBCPU cpu;
     GBMEM mem;
-    mem.store8(0x0, 0b1010100);
+    cpu.A(0b11110000);
+    cpu.B(0b11001100);
+    mem.store8(0x0, 0b10101000);
     ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    ASSERT_EQ(cpu.A(), 0b00111100);
 }
+
+TEST(CPUTest, XORAR8_Z) {
+    GBCPU cpu;
+    GBMEM mem;
+    mem.store8(0x0, 0b10101000);
+    cpu.A(0b11110000);
+    cpu.B(0b11110000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    ASSERT_EQ(cpu.A(), 0);
+    ASSERT_TRUE(cpu.hasZ());
+}
+
 // OP(ORAR8         , 0b10110000, 0b11111000)
 TEST(CPUTest, ORAR8) {
     GBCPU cpu;
     GBMEM mem;
+    cpu.A(0b11110000);
+    cpu.B(0b11001100);
     mem.store8(0x0, 0b10110000);
     ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    ASSERT_EQ(cpu.A(), 0b11111100);
 }
+
+TEST(CPUTest, ORAR8_Z) {
+    GBCPU cpu;
+    GBMEM mem;
+    cpu.A(0b00000000);
+    cpu.B(0b00000000);
+    mem.store8(0x0, 0b10110000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    ASSERT_EQ(cpu.A(), 0);
+    ASSERT_TRUE(cpu.hasZ());
+}
+
 // OP(CPAR8         , 0b10111000, 0b11111000)
 TEST(CPUTest, CPAR8) {
     GBCPU cpu;
     GBMEM mem;
+    cpu.B(0x0F);
+    cpu.A(0x10);
     mem.store8(0x0, 0b10111000);
     ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    ASSERT_EQ(cpu.A(), 0x10);
+    ASSERT_TRUE(cpu.hasN());
+    ASSERT_TRUE(cpu.hasH());
 }
+
+TEST(CPUTest, CPAR8_Z) {
+    GBCPU cpu;
+    GBMEM mem;
+    cpu.B(0x10);
+    cpu.A(0x10);
+    mem.store8(0x0, 0b10111000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    ASSERT_TRUE(cpu.hasZ());
+}
+
+TEST(CPUTest, CPAR8_C) {
+    GBCPU cpu;
+    GBMEM mem;
+    cpu.B(0x10);
+    cpu.A(0x0F);
+    mem.store8(0x0, 0b10111000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    ASSERT_TRUE(cpu.hasC());
+}
+
 //
 // // ----------------------------
 // //          BLOCK 3
@@ -552,149 +669,322 @@ TEST(CPUTest, CPAR8) {
 TEST(CPUTest, ADDAIMM8) {
     GBCPU cpu;
     GBMEM mem;
+    cpu.A(0xFF);
     mem.store8(0x0, 0b11000110);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    mem.store8(0x1, 1);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.A(), 0);
+    ASSERT_TRUE(cpu.hasZ());
+    ASSERT_FALSE(cpu.hasN());
+    ASSERT_TRUE(cpu.hasH());
+    ASSERT_TRUE(cpu.hasC());
 }
+
 // OP(ADCAIMM8      , 0b11001110, 0b11111111)
 TEST(CPUTest, ADCAIMM8) {
     GBCPU cpu;
     GBMEM mem;
+    cpu.setC();
+    cpu.A(0xFE);
     mem.store8(0x0, 0b11001110);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    mem.store8(0x1, 1);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.A(), 0);
+    ASSERT_TRUE(cpu.hasZ());
+    ASSERT_FALSE(cpu.hasN());
+    ASSERT_TRUE(cpu.hasH());
+    ASSERT_TRUE(cpu.hasC());
 }
+
 // OP(SUBAIMM8      , 0b11010110, 0b11111111)
 TEST(CPUTest, SUBAIMM8) {
     GBCPU cpu;
     GBMEM mem;
+    cpu.A(0x10);
     mem.store8(0x0, 0b11010110);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    mem.store8(0x1, 0x0F);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.A(), 0x1);
+    ASSERT_TRUE(cpu.hasN());
+    ASSERT_TRUE(cpu.hasH());
 }
+
+TEST(CPUTest, SUBAIMM8_Z) {
+    GBCPU cpu;
+    GBMEM mem;
+    cpu.A(0x10);
+    mem.store8(0x0, 0b11010110);
+    mem.store8(0x1, 0x10);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.A(), 0x0);
+    ASSERT_TRUE(cpu.hasZ());
+}
+
+TEST(CPUTest, SUBAIMM8_C) {
+    GBCPU cpu;
+    GBMEM mem;
+    cpu.A(0x0F);
+    mem.store8(0x0, 0b11010110);
+    mem.store8(0x1, 0x10);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.A(), 0xFF);
+    ASSERT_TRUE(cpu.hasC());
+}
+
 // OP(SBCAIMM8      , 0b11011110, 0b11111111)
 TEST(CPUTest, SBCAIMM8) {
     GBCPU cpu;
     GBMEM mem;
+    cpu.A(0x10);
+    cpu.setC();
     mem.store8(0x0, 0b11011110);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    mem.store8(0x1, 0xE);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.A(), 0x1);
+    ASSERT_TRUE(cpu.hasN());
+    ASSERT_TRUE(cpu.hasH());
 }
+
+TEST(CPUTest, SBCAIMM8_Z) {
+    GBCPU cpu;
+    GBMEM mem;
+    cpu.A(0x10);
+    cpu.setC();
+    mem.store8(0x0, 0b11011110);
+    mem.store8(0x1, 0xF);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.A(), 0x0);
+    ASSERT_TRUE(cpu.hasZ());
+}
+
+TEST(CPUTest, SBCAIMM8_C) {
+    GBCPU cpu;
+    GBMEM mem;
+    cpu.A(0x0F);
+    mem.store8(0x0, 0b11011110);
+    mem.store8(0x1, 0x10);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.A(), 0xFF);
+    ASSERT_TRUE(cpu.hasC());
+}
+
 // OP(ANDAIMM8      , 0b11100110, 0b11111111)
 TEST(CPUTest, ANDAIMM8) {
     GBCPU cpu;
     GBMEM mem;
+    cpu.A(0b11110000);
     mem.store8(0x0, 0b11100110);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    mem.store8(0x1, 0b11001100);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.A(), 0b11000000);
+    ASSERT_TRUE(cpu.hasH());
 }
+
+TEST(CPUTest, ANDAIMM8_Z) {
+    GBCPU cpu;
+    GBMEM mem;
+    cpu.A(0b00000000);
+    mem.store8(0x0, 0b11100110);
+    mem.store8(0x1, 0b11111111);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.A(), 0);
+    ASSERT_TRUE(cpu.hasZ());
+}
+
 // OP(XORAIMM8      , 0b11101110, 0b11111111)
 TEST(CPUTest, XORAIMM8) {
     GBCPU cpu;
     GBMEM mem;
+    cpu.A(0b11110000);
     mem.store8(0x0, 0b11101110);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    mem.store8(0x1, 0b11001100);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.A(), 0b00111100);
 }
+
+TEST(CPUTest, XORAIMM8_Z) {
+    GBCPU cpu;
+    GBMEM mem;
+    cpu.A(0b11111111);
+    mem.store8(0x0, 0b11101110);
+    mem.store8(0x1, 0b11111111);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.A(), 0);
+    ASSERT_TRUE(cpu.hasZ());
+}
+
 // OP(ORAIMM8       , 0b11110110, 0b11111111)
 TEST(CPUTest, ORAIMM8) {
     GBCPU cpu;
     GBMEM mem;
+    cpu.A(0b11110000);
     mem.store8(0x0, 0b11110110);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    mem.store8(0x1, 0b11001100);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.A(), 0b11111100);
 }
+
+TEST(CPUTest, ORAIMM8_Z) {
+    GBCPU cpu;
+    GBMEM mem;
+    cpu.A(0b00000000);
+    mem.store8(0x0, 0b11110110);
+    mem.store8(0x1, 0b00000000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.A(), 0);
+    ASSERT_TRUE(cpu.hasZ());
+}
+
 // OP(CPAIMM8       , 0b11111110, 0b11111111)
 TEST(CPUTest, CPAIMM8) {
     GBCPU cpu;
     GBMEM mem;
+    cpu.A(0x10);
     mem.store8(0x0, 0b11111110);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    mem.store8(0x1, 0x0F);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.A(), 0x10);
+    ASSERT_TRUE(cpu.hasN());
+    ASSERT_TRUE(cpu.hasH());
 }
+
+TEST(CPUTest, CPAIMM8_Z) {
+    GBCPU cpu;
+    GBMEM mem;
+    cpu.A(0x10);
+    mem.store8(0x0, 0b11111110);
+    mem.store8(0x1, 0x10);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_TRUE(cpu.hasZ());
+}
+
+TEST(CPUTest, CPAIMM8_C) {
+    GBCPU cpu;
+    GBMEM mem;
+    cpu.A(0x0F);
+    mem.store8(0x0, 0b11111110);
+    mem.store8(0x1, 0x10);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_TRUE(cpu.hasC());
+}
+
 //
 // OP(RETCOND       , 0b11000000, 0b11100111)
-TEST(CPUTest, RETCOND) {
-    GBCPU cpu;
-    GBMEM mem;
-    mem.store8(0x0, 0b11000000);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+TEST(CPUTest, RETCOND_T) {
+    SKIP;
+    // GBCPU cpu;
+    // GBMEM mem;
+    // mem.store8(0x0, 0b11011000);
+    // ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
 }
+
 // OP(RET           , 0b11001001, 0b11111111)
 TEST(CPUTest, RET) {
-    GBCPU cpu;
-    GBMEM mem;
-    mem.store8(0x0, 0b11001001);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
     SKIP;
+    // GBCPU cpu;
+    // GBMEM mem;
+    // mem.store8(0x0, 0b11001001);
+    // ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
 }
+
 // OP(RETI          , 0b11011001, 0b11111111)
 TEST(CPUTest, RETI) {
-    GBCPU cpu;
-    GBMEM mem;
-    mem.store8(0x0, 0b11011001);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    // GBCPU cpu;
+    // GBMEM mem;
+    // mem.store8(0x0, 0b11011001);
+    // ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
     SKIP;
 }
 // OP(JPCONDIMM16   , 0b11000010, 0b11100111)
-TEST(CPUTest, JPCONDIMM16) {
+TEST(CPUTest, JPCONDIMM16_T) {
     GBCPU cpu;
     GBMEM mem;
-    mem.store8(0x0, 0b11000010);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    cpu.setC();
+    mem.store8(0x0, 0b11011010);
+    mem.store16(0x1, 0x10FE);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x10FE);
 }
+
+TEST(CPUTest, JPCONDIMM16_NT) {
+    GBCPU cpu;
+    GBMEM mem;
+    mem.store8(0x0, 0b11011010);
+    mem.store16(0x1, 0x10FE);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x3);
+}
+
 // OP(JPIMM16       , 0b11000011, 0b11111111)
 TEST(CPUTest, JPIMM16) {
     GBCPU cpu;
     GBMEM mem;
     mem.store8(0x0, 0b11000011);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    mem.store16(0x1, 0x10FE);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x10FE);
 }
+
 // OP(JPHL          , 0b11101001, 0b11111111)
 TEST(CPUTest, JPHL) {
     GBCPU cpu;
     GBMEM mem;
+    cpu.HL(0x10FE);
     mem.store8(0x0, 0b11101001);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x10FE);
 }
+
 // OP(CALLCONDIMM16 , 0b11000100, 0b11100111)
-TEST(CPUTest, CALLCONDIMM16) {
+TEST(CPUTest, CALLCONDIMM16_T) {
     GBCPU cpu;
     GBMEM mem;
-    mem.store8(0x0, 0b11000100);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    cpu.setC();
+    mem.store8(0x0, 0b11011100);
+    mem.store16(0x1, 0x10FE);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x10FE);
     SKIP;
 }
+
+TEST(CPUTest, CALLCONDIMM16_NT) {
+    GBCPU cpu;
+    GBMEM mem;
+    mem.store8(0x0, 0b11011100);
+    mem.store16(0x1, 0x10FE);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x3);
+    SKIP;
+}
+
 // OP(CALLIMM16     , 0b11001101, 0b11111111)
 TEST(CPUTest, CALLIMM16) {
     GBCPU cpu;
     GBMEM mem;
     mem.store8(0x0, 0b11001101);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    mem.store16(0x1, 0x10FE);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x10FE);
     SKIP;
 }
+
 // OP(RSTTGT3       , 0b11000111, 0b11000111)
 TEST(CPUTest, RSTTGT3) {
     GBCPU cpu;
     GBMEM mem;
-    mem.store8(0x0, 0b11000111);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    mem.store8(0x0, 0b11111111);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x38);
+    SKIP;
 }
 //
 // OP(POPR16STK     , 0b11000001, 0b11001111)
 TEST(CPUTest, POPR16STK) {
-    GBCPU cpu;
-    GBMEM mem;
-    mem.store8(0x0, 0b11000001);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    // GBCPU cpu;
+    // GBMEM mem;
+    // mem.store8(0x0, 0b11000001);
+    // ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
     SKIP;
 }
+
 // OP(PUSHR16STK    , 0b11000101, 0b11001111)
 TEST(CPUTest, PUSHR16STK) {
-    GBCPU cpu;
-    GBMEM mem;
-    mem.store8(0x0, 0b11000101);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    // GBCPU cpu;
+    // GBMEM mem;
+    // mem.store8(0x0, 0b11000101);
+    // ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
     SKIP;
 }
 //
@@ -702,75 +992,96 @@ TEST(CPUTest, PUSHR16STK) {
 TEST(CPUTest, LDHCA) {
     GBCPU cpu;
     GBMEM mem;
+    cpu.A(0xAF);
+    cpu.C(0xF);
     mem.store8(0x0, 0b11100010);
     ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    ASSERT_EQ(mem.read8(0xFF0F), 0xAF);
 }
+
 // OP(LDHIMM8A      , 0b11100000, 0b11111111)
 TEST(CPUTest, LDHIMM8A) {
     GBCPU cpu;
     GBMEM mem;
+    cpu.A(0xAF);
     mem.store8(0x0, 0b11100000);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    mem.store8(0x1, 0xF);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(mem.read8(0xFF0F), 0xAF);
 }
+
 // OP(LDIMM16A      , 0b11101010, 0b11111111)
 TEST(CPUTest, LDIMM16A) {
     GBCPU cpu;
     GBMEM mem;
+    cpu.A(0xDC);
     mem.store8(0x0, 0b11101010);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    mem.store16(0x1, 0xFEDC);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x3);
+    ASSERT_EQ(mem.read8(0xFEDC), 0xDC);
 }
+
 // OP(LDHAC         , 0b11110010, 0b11111111)
 TEST(CPUTest, LDHAC) {
     GBCPU cpu;
     GBMEM mem;
+    cpu.C(0xF);
     mem.store8(0x0, 0b11110010);
+    mem.store8(0xFF0F, 0xAF);
     ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    ASSERT_EQ(cpu.A(), 0xAF);
 }
+
 // OP(LDHAIMM8      , 0b11110000, 0b11111111)
 TEST(CPUTest, LDHAIMM8) {
     GBCPU cpu;
     GBMEM mem;
     mem.store8(0x0, 0b11110000);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    mem.store8(0x1, 0xF);
+    mem.store8(0xFF0F, 0xAF);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.A(), 0xAF);
 }
+
 // OP(LDAIMM16      , 0b11111010, 0b11111111)
 TEST(CPUTest, LDAIMM16) {
     GBCPU cpu;
     GBMEM mem;
     mem.store8(0x0, 0b11111010);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    mem.store16(0x1, 0xFEDC);
+    mem.store8(0xFEDC, 0xDC);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x3);
+    ASSERT_EQ(cpu.A(), 0xDC);
 }
+
 //
 // OP(ADDSPIMM8     , 0b11101000, 0b11111111)
 TEST(CPUTest, ADDSPIMM8) {
     GBCPU cpu;
     GBMEM mem;
     mem.store8(0x0, 0b11101000);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
     SKIP;
 }
+
 // OP(LDHLSPIMM8    , 0b11111000, 0b11111111)
 TEST(CPUTest, LDHLSPIMM8) {
     GBCPU cpu;
     GBMEM mem;
     mem.store8(0x0, 0b11111000);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
     SKIP;
 }
+
 // OP(LDSPHL        , 0b11111001, 0b11111111)
 TEST(CPUTest, LDSPHL) {
     GBCPU cpu;
     GBMEM mem;
     mem.store8(0x0, 0b11111001);
     ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    SKIP;
 }
-//
+
 // OP(DI            , 0b11110011, 0b11111111)
 TEST(CPUTest, DI) {
     GBCPU cpu;
@@ -791,98 +1102,174 @@ TEST(CPUTest, EI) {
 // // ----------------------------
 // //          BLOCK 4
 // // ----------------------------
-// OP(CB            , 0b1101011, 0b11111111)
-TEST(CPUTest, CB) {
-    GBCPU cpu;
-    GBMEM mem;
-    mem.store8(0x0, 0b1101011);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
-}
-//
-// #ifdef CBINSTS
+// OP(CB            , 0b11001011, 0b11111111)
 // OP(RLCR8         , 0b00000000, 0b11111000)
 TEST(CPUTest, RLCR8) {
     GBCPU cpu;
     GBMEM mem;
-    mem.store8(0x0, 0b00000000);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    cpu.setC();
+    cpu.B(0b01010101);
+    mem.store8(0x0, 0b11001011);
+    mem.store8(0x1, 0b00000000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.B(), 0b10101010);
+    ASSERT_FALSE(cpu.hasC());
 }
+
+TEST(CPUTest, RLCR8_C) {
+    GBCPU cpu;
+    GBMEM mem;
+    cpu.setC();
+    cpu.B(0b10101010);
+    mem.store8(0x0, 0b11001011);
+    mem.store8(0x1, 0b00000000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.B(), 0b01010101);
+    ASSERT_TRUE(cpu.hasC());
+}
+
 // OP(RRCR8         , 0b00001000, 0b11111000)
 TEST(CPUTest, RRCR8) {
     GBCPU cpu;
     GBMEM mem;
-    mem.store8(0x0, 0b00001000);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    mem.store8(0x0, 0b11001011);
+    mem.store8(0x1, 0b00001000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
 }
 // OP(RLR8          , 0b00010000, 0b11111000)
 TEST(CPUTest, RLR8) {
     GBCPU cpu;
     GBMEM mem;
-    mem.store8(0x0, 0b00010000);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    cpu.B(0b01010101);
+    mem.store8(0x0, 0b11001011);
+    mem.store8(0x1, 0b00010000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.B(), 0b10101010);
+    ASSERT_FALSE(cpu.hasC());
 }
-// OP(RRR8          , 0b00010000, 0b11111000)
+
+TEST(CPUTest, RLR8_C) {
+    GBCPU cpu;
+    GBMEM mem;
+    cpu.setC();
+    cpu.B(0b10101010);
+    mem.store8(0x0, 0b11001011);
+    mem.store8(0x1, 0b00010000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.B(), 0b01010101);
+    ASSERT_TRUE(cpu.hasC());
+}
+
+// OP(RRR8          , 0b00011000, 0b11111000)
 TEST(CPUTest, RRR8) {
     GBCPU cpu;
     GBMEM mem;
-    mem.store8(0x0, 0b00010000);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    cpu.setC();
+    cpu.B(0b10101010);
+    mem.store8(0x0, 0b11001011);
+    mem.store8(0x1, 0b00011000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.B(), 0b11010101);
+    ASSERT_FALSE(cpu.hasC());
 }
+
+TEST(CPUTest, RRR8_C) {
+    GBCPU cpu;
+    GBMEM mem;
+    cpu.B(0b01010101);
+    mem.store8(0x0, 0b11001011);
+    mem.store8(0x1, 0b00011000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.B(), 0b00101010);
+    ASSERT_TRUE(cpu.hasC());
+}
+
 // OP(SLAR8         , 0b00100000, 0b11111000)
 TEST(CPUTest, SLAR8) {
     GBCPU cpu;
     GBMEM mem;
-    mem.store8(0x0, 0b00100000);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    cpu.B(0b10000000);
+    mem.store8(0x0, 0b11001011);
+    mem.store8(0x1, 0b00100000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.B(), 0);
+    ASSERT_TRUE(cpu.hasZ());
+    ASSERT_TRUE(cpu.hasC());
 }
+
 // OP(SRAR8         , 0b00101000, 0b11111000)
 TEST(CPUTest, SRAR8) {
     GBCPU cpu;
     GBMEM mem;
-    mem.store8(0x0, 0b00101000);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    cpu.B(0b10000001);
+    mem.store8(0x0, 0b11001011);
+    mem.store8(0x1, 0b00101000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.B(), 0b11000000);
+    ASSERT_TRUE(cpu.hasC());
 }
+
 // OP(SWAPR8        , 0b00110000, 0b11111000)
 TEST(CPUTest, SWAPR8) {
     GBCPU cpu;
     GBMEM mem;
-    mem.store8(0x0, 0b00110000);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    cpu.B(0b10101100);
+    mem.store8(0x0, 0b11001011);
+    mem.store8(0x1, 0b00110000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.B(), 0b11001010);
 }
 // OP(SRLR8         , 0b00111000, 0b11111000)
 TEST(CPUTest, SRLR8) {
     GBCPU cpu;
     GBMEM mem;
-    mem.store8(0x0, 0b00111000);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
-    SKIP;
+    cpu.B(0b10000001);
+    mem.store8(0x0, 0b11001011);
+    mem.store8(0x1, 0b00111000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.B(), 0b01000000);
+    ASSERT_TRUE(cpu.hasC());
 }
 //
 // OP(BITB3R8       , 0b01000000, 0b11000000)
-TEST(CPUTest, BITB3R8) {
+TEST(CPUTest, BITB3R8_SET) {
     GBCPU cpu;
     GBMEM mem;
-    mem.store8(0x0, 0b01000000);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    cpu.B(0b00100000);
+    mem.store8(0x0, 0b11001011);
+    mem.store8(0x1, 0b01101000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_FALSE(cpu.hasZ());
 }
+
+TEST(CPUTest, BITB3R8_UNSET) {
+    GBCPU cpu;
+    GBMEM mem;
+    cpu.B(0b11011111);
+    mem.store8(0x0, 0b11001011);
+    mem.store8(0x1, 0b01101000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_TRUE(cpu.hasZ());
+}
+
 // OP(RESB3R8       , 0b10000000, 0b11000000)
 TEST(CPUTest, RESB3R8) {
     GBCPU cpu;
     GBMEM mem;
-    mem.store8(0x0, 0b10000000);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    cpu.B(0b11111111);
+    mem.store8(0x0, 0b11001011);
+    mem.store8(0x1, 0b10101000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.B(), 0b11011111);
 }
+
 // OP(SETB3R8       , 0b11000000, 0b11000000)
 TEST(CPUTest, SETB3R8) {
     GBCPU cpu;
     GBMEM mem;
-    mem.store8(0x0, 0b11000000);
-    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x1);
+    cpu.B(0b00000000);
+    mem.store8(0x0, 0b11001011);
+    mem.store8(0x1, 0b11101000);
+    ASSERT_EQ(cpu.parseInstruction(mem, 0x0), 0x2);
+    ASSERT_EQ(cpu.B(), 0b00100000);
 }

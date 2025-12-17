@@ -38,7 +38,36 @@ void GBCPU::storeR16(R16 reg, uint16_t val) {
     }
 }
 
-uint8_t GBCPU::readR8(R8 reg) {
+uint16_t GBCPU::readR16STK(R16STK reg) {
+    switch (reg) {
+        case r16stk_BC: return BC();
+        case r16stk_DE: return DE();
+        case r16stk_HL: return HL();
+        case r16stk_AF: return AF();
+    }
+    return 0;
+}
+
+void GBCPU::storeR16STK(R16STK reg, uint16_t val) {
+    switch (reg) {
+        case r16stk_BC: BC(val); break;
+        case r16stk_DE: DE(val); break;
+        case r16stk_HL: HL(val); break;
+        case r16stk_AF: AF(val); break;
+    }
+}
+
+uint16_t GBCPU::readR16MEM(R16MEM reg) {
+    switch (reg) {
+        case r16mem_BC: return BC();
+        case r16mem_DE: return DE();
+        case r16mem_HLI: return HL() + 1;
+        case r16mem_HLD: return AF() - 1;
+    }
+    return 0;
+}
+
+uint8_t GBCPU::readR8(GBMEM &mem, R8 reg) {
     switch (reg) {
         case r8_A:  return A();
         case r8_B:  return B();
@@ -47,12 +76,12 @@ uint8_t GBCPU::readR8(R8 reg) {
         case r8_E:  return E();
         case r8_H:  return H();
         case r8_L:  return L();
-        case r8_HL: return HL();
+        case r8_HL: return mem.read8(HL());
     }
     return 0;
 }
 
-void GBCPU::storeR8(R8 reg, uint8_t val) {
+void GBCPU::storeR8(GBMEM &mem, R8 reg, uint8_t val) {
     switch (reg) {
         case r8_A:  A(val); break;
         case r8_B:  B(val); break;
@@ -61,7 +90,7 @@ void GBCPU::storeR8(R8 reg, uint8_t val) {
         case r8_E:  E(val); break;
         case r8_H:  H(val); break;
         case r8_L:  L(val); break;
-        case r8_HL: HL(val); break;
+        case r8_HL: mem.store8(HL(), val); break;
     }
 }
 
@@ -95,8 +124,8 @@ uint16_t GBCPU::handleLDR16IMM16(GBMEM& mem, uint16_t address) {
 
 uint16_t GBCPU::handleLDR16MEMA(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
-    R16 reg = static_cast<R16>((inst & 0b00110000) >> 4);
-    uint8_t pointer = readR16(reg);
+    R16MEM reg = static_cast<R16MEM>((inst & 0b00110000) >> 4);
+    uint8_t pointer = readR16MEM(reg);
     uint8_t data = A();
     mem.store8(pointer, data);
     Log::d("LDR16MEMA: Store data " + std::to_string(data) + 
@@ -107,8 +136,8 @@ uint16_t GBCPU::handleLDR16MEMA(GBMEM& mem, uint16_t address) {
 
 uint16_t GBCPU::handleLDAR16MEM(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
-    R16 reg = static_cast<R16>((inst & 0b00110000) >> 4);
-    uint8_t pointer = readR16(reg);
+    R16MEM reg = static_cast<R16MEM>((inst & 0b00110000) >> 4);
+    uint8_t pointer = readR16MEM(reg);
     uint8_t data = mem.read8(pointer);
     A(data);
     Log::d("LDAR16MEM: Load data " + std::to_string(data) + 
@@ -168,13 +197,13 @@ uint16_t GBCPU::handleADDHLR16(GBMEM& mem, uint16_t address) {
 uint16_t GBCPU::handleINCR8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     R8 reg = static_cast<R8>((inst & 0b00111000) >> 3);
-    uint8_t r8 = readR8(reg);
+    uint8_t r8 = readR8(mem, reg);
     set(f_N, false);
     uint8_t result = r8 + 1;
     bool overflow = ((r8 & 0b111) + 1) >> 3;
     set(f_Z, result == 0);
     set(f_H, overflow);
-    storeR8(reg, result);
+    storeR8(mem, reg, result);
     Log::d("INCR8: Incremented r8 " + std::to_string(r8) +
            "Z, H: " + std::to_string(result == 0) + ", " +
            std::to_string(overflow), LOG_TAG);
@@ -183,13 +212,13 @@ uint16_t GBCPU::handleINCR8(GBMEM& mem, uint16_t address) {
 uint16_t GBCPU::handleDECR8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     R8 reg = static_cast<R8>((inst & 0b00111000) >> 3);
-    uint8_t r8 = readR8(reg);
+    uint8_t r8 = readR8(mem, reg);
     set(f_N, true);
     uint8_t result = r8 - 1;
     bool overflow = ((r8 & 0b111) - 1) < 0;
     set(f_Z, result == 0);
     set(f_H, overflow);
-    storeR8(reg, result);
+    storeR8(mem, reg, result);
     Log::d("DECR8: Decremented r8 " + std::to_string(r8) +
            "Z, H: " + std::to_string(result == 0) + ", " +
            std::to_string(overflow), LOG_TAG);
@@ -200,7 +229,7 @@ uint16_t GBCPU::handleLDR8IMM8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     R8 reg = static_cast<R8>((inst & 0b00111000) >> 3);
     uint8_t data = mem.read8(address + 1);
-    storeR8(reg, data);
+    storeR8(mem, reg, data);
     Log::d("LDR8IMM8: Store " + std::to_string(data) +
            " into r8 " + std::to_string(reg), LOG_TAG);
     return address + 2;
@@ -264,6 +293,7 @@ uint16_t GBCPU::handleDAA(GBMEM&, uint16_t address) {
         }
         A(A() + adj);
     }
+    set(f_Z, A() == 0);
     Log::d("DAA: A, Z, C: " + std::to_string(A()) +
            ", " + std::to_string(hasZ()) + ", " +
            std::to_string(hasC()), LOG_TAG);
@@ -292,7 +322,7 @@ uint16_t GBCPU::handleCCF(GBMEM&, uint16_t address) {
 
 uint16_t GBCPU::handleJRIMM8(GBMEM& mem, uint16_t address) {
     int8_t offset = mem.read8(address + 1);
-    uint16_t resultAdd = address + 1 + offset;
+    uint16_t resultAdd = address + 2 + offset;
     Log::d("JRIMM8: Jump to " + std::to_string(resultAdd), LOG_TAG);
     return resultAdd;
 }
@@ -302,7 +332,7 @@ uint16_t GBCPU::handleJRCONDIMM8(GBMEM& mem, uint16_t address) {
     int8_t offset = mem.read8(address + 1);
     COND cond = static_cast<COND>((inst & 0b00011000) >> 3);
     if (hasCond(cond)) {
-        uint16_t resultAdd = address + 1 + offset;
+        uint16_t resultAdd = address + 2 + offset;
         Log::d("JRCONDIMM8: Jump to " + 
                std::to_string(resultAdd), LOG_TAG);
         return resultAdd;
@@ -326,8 +356,8 @@ uint16_t GBCPU::handleLDR8R8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     R8 dest = static_cast<R8>((inst & 0b00111000) >> 3);
     R8 source = static_cast<R8>(inst & 0b00000111);
-    storeR8(dest, readR8(source));
-    Log::d("LDR8R8: Stored " + std::to_string(readR8(source))
+    storeR8(mem, dest, readR8(mem, source));
+    Log::d("LDR8R8: Stored " + std::to_string(readR8(mem, source))
            + "(from r8" + std::to_string(source) + ") to r8" 
            + std::to_string(dest), LOG_TAG);
     return address + 1;
@@ -348,7 +378,7 @@ uint16_t GBCPU::handleADDAR8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     R8 reg = static_cast<R8>(inst & 0b00000111);
     uint8_t a = A();
-    uint8_t val = readR8(reg);
+    uint8_t val = readR8(mem, reg);
     uint8_t result = a + val;
     A(result);
     set(f_Z, result == 0);
@@ -366,7 +396,7 @@ uint16_t GBCPU::handleADCAR8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     R8 reg = static_cast<R8>(inst & 0b00000111);
     uint8_t a = A();
-    uint8_t val = readR8(reg);
+    uint8_t val = readR8(mem, reg);
     uint8_t carry = hasC();
     uint8_t result = a + val + carry;
     A(result);
@@ -386,11 +416,11 @@ uint16_t GBCPU::handleSUBAR8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     R8 reg = static_cast<R8>(inst & 0b00000111);
     uint8_t a = A();
-    uint8_t val = readR8(reg);
+    uint8_t val = readR8(mem, reg);
     uint8_t result = a - val;
     A(result);
     set(f_Z, result == 0);
-    set(f_N, false);
+    set(f_N, true);
     bool borrow3 = ((a & 0b111) - (val & 0b111)) < 0;
     bool borrow7 = ((a & 0b1111111) - (val & 0b1111111)) < 0;
     set(f_H, borrow3);
@@ -404,12 +434,12 @@ uint16_t GBCPU::handleSBCAR8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     R8 reg = static_cast<R8>(inst & 0b00000111);
     uint8_t a = A();
-    uint8_t val = readR8(reg);
+    uint8_t val = readR8(mem, reg);
     uint8_t carry = hasC();
     uint8_t result = a - val - carry;
     A(result);
     set(f_Z, result == 0);
-    set(f_N, false);
+    set(f_N, true);
     bool borrow3 = ((a & 0b111) - (val & 0b111) - carry) < 0;
     bool borrow7 = ((a & 0b1111111) - (val & 0b1111111) - carry) < 0;
     set(f_H, borrow3);
@@ -424,8 +454,9 @@ uint16_t GBCPU::handleANDAR8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     R8 reg = static_cast<R8>(inst & 0b00000111);
     uint8_t a = A();
-    uint8_t val = readR8(reg);
+    uint8_t val = readR8(mem, reg);
     uint8_t result = a & val;
+    A(result);
     set(f_Z, result == 0);
     set(f_H, true);
     Log::d("ANDAR8: Set A to the bitwise result of and "
@@ -437,8 +468,9 @@ uint16_t GBCPU::handleXORAR8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     R8 reg = static_cast<R8>(inst & 0b00000111);
     uint8_t a = A();
-    uint8_t val = readR8(reg);
+    uint8_t val = readR8(mem, reg);
     uint8_t result = a ^ val;
+    A(result);
     set(f_Z, result == 0);
     set(f_H, true);
     Log::d("XORAR8: Set A to the bitwise result of xor "
@@ -450,8 +482,9 @@ uint16_t GBCPU::handleORAR8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     R8 reg = static_cast<R8>(inst & 0b00000111);
     uint8_t a = A();
-    uint8_t val = readR8(reg);
+    uint8_t val = readR8(mem, reg);
     uint8_t result = a | val;
+    A(result);
     set(f_Z, result == 0);
     set(f_H, true);
     Log::d("ORAR8: Set A to the bitwise result of or "
@@ -463,7 +496,7 @@ uint16_t GBCPU::handleCPAR8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     R8 reg = static_cast<R8>(inst & 0b00000111);
     uint8_t a = A();
-    uint8_t val = readR8(reg);
+    uint8_t val = readR8(mem, reg);
     set(f_Z, a - val == 0);
     set(f_N, 1);
     set(f_H, (a & 0xF) < (val & 0xF));
@@ -514,7 +547,7 @@ uint16_t GBCPU::handleSUBAIMM8(GBMEM& mem, uint16_t address) {
     uint8_t result = a - val;
     A(result);
     set(f_Z, result == 0);
-    set(f_N, false);
+    set(f_N, true);
     bool borrow3 = ((a & 0b111) - (val & 0b111)) < 0;
     bool borrow7 = ((a & 0b1111111) - (val & 0b1111111)) < 0;
     set(f_H, borrow3);
@@ -530,7 +563,7 @@ uint16_t GBCPU::handleSBCAIMM8(GBMEM& mem, uint16_t address) {
     uint8_t result = a - val - carry;
     A(result);
     set(f_Z, result == 0);
-    set(f_N, false);
+    set(f_N, true);
     bool borrow3 = ((a & 0b111) - (val & 0b111) - carry) < 0;
     bool borrow7 = ((a & 0b1111111) - (val & 0b1111111) - carry) < 0;
     set(f_H, borrow3);
@@ -544,6 +577,7 @@ uint16_t GBCPU::handleANDAIMM8(GBMEM& mem, uint16_t address) {
     uint8_t a = A();
     uint8_t val = mem.read8(address + 1);
     uint8_t result = a & val;
+    A(result);
     set(f_Z, result == 0);
     set(f_H, true);
     Log::d("ANDAIMM8: Set A to the bitwise result of and "
@@ -555,6 +589,7 @@ uint16_t GBCPU::handleXORAIMM8(GBMEM& mem, uint16_t address) {
     uint8_t a = A();
     uint8_t val = mem.read8(address + 1);
     uint8_t result = a ^ val;
+    A(result);
     set(f_Z, result == 0);
     set(f_H, true);
     Log::d("XORAIMM8: Set A to the bitwise result of xor "
@@ -566,6 +601,7 @@ uint16_t GBCPU::handleORAIMM8(GBMEM& mem, uint16_t address) {
     uint8_t a = A();
     uint8_t val = mem.read8(address + 1);
     uint8_t result = a | val;
+    A(result);
     set(f_Z, result == 0);
     set(f_H, true);
     Log::d("ORAIMM8: Set A to the bitwise result of or "
@@ -682,9 +718,9 @@ uint16_t GBCPU::handleRSTTGT3(GBMEM& mem, uint16_t address) {
 
 uint16_t GBCPU::handlePOPR16STK(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
-    R16 r16 = static_cast<R16>((inst & 0b00110000) >> 3);
+    R16STK r16 = static_cast<R16STK>((inst & 0b00110000) >> 3);
     uint16_t sp = mem.read16(SP);
-    storeR16(r16, sp);
+    storeR16STK(r16, sp);
     SP += 2;
     Log::d("POPR16STK: Popping " + std::to_string(sp) +
            " ([SP]) into r16" + std::to_string(r16), LOG_TAG);
@@ -693,8 +729,8 @@ uint16_t GBCPU::handlePOPR16STK(GBMEM& mem, uint16_t address) {
 
 uint16_t GBCPU::handlePUSHR16STK(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
-    R16 r16 = static_cast<R16>((inst & 0b00110000) >> 3);
-    uint16_t data = readR16(r16);
+    R16STK r16 = static_cast<R16STK>((inst & 0b00110000) >> 3);
+    uint16_t data = readR16STK(r16);
     SP -= 2;
     mem.store16(SP, data);
     Log::d("PUSHR16STK: Pushing " + std::to_string(data) +
@@ -721,7 +757,7 @@ uint16_t GBCPU::handleLDHIMM8A(GBMEM& mem, uint16_t address) {
 }
 
 uint16_t GBCPU::handleLDIMM16A(GBMEM& mem, uint16_t address) {
-    uint8_t n16 = mem.read16(address + 1);
+    uint16_t n16 = mem.read16(address + 1);
     uint8_t a = A();
     mem.store8(n16, a);
     Log::d("LDIMM16A: Store data " + std::to_string(a) + 
@@ -748,7 +784,7 @@ uint16_t GBCPU::handleLDHAIMM8(GBMEM& mem, uint16_t address) {
 }
 
 uint16_t GBCPU::handleLDAIMM16(GBMEM& mem, uint16_t address) {
-    uint8_t n16 = mem.read16(address + 1);
+    uint16_t n16 = mem.read16(address + 1);
     uint8_t data = mem.read8(n16);
     A(data);
     Log::d("LDAIMM16: Load data " + std::to_string(data) + 
@@ -804,32 +840,32 @@ uint16_t GBCPU::handleEI(GBMEM&, uint16_t address) {
 // ----------------------------
 uint16_t GBCPU::handleCB(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address + 1);
-    if ((inst & RLCR8)   == 0b11111000) return handleRLCR8(mem, address + 1);
-    if ((inst & RRCR8)   == 0b11111000) return handleRRCR8(mem, address + 1);
-    if ((inst & RLR8)    == 0b11111000) return handleRLR8(mem, address + 1);
-    if ((inst & RRR8)    == 0b11111000) return handleRRR8(mem, address + 1);
-    if ((inst & SLAR8)   == 0b11111000) return handleSLAR8(mem, address + 1);
-    if ((inst & SRAR8)   == 0b11111000) return handleSRAR8(mem, address + 1);
-    if ((inst & SWAPR8)  == 0b11111000) return handleSWAPR8(mem, address + 1);
-    if ((inst & SRLR8)   == 0b11111000) return handleSRLR8(mem, address + 1);
-    if ((inst & BITB3R8) == 0b11000000) return handleBITB3R8(mem, address + 1);
-    if ((inst & RESB3R8) == 0b11000000) return handleRESB3R8(mem, address + 1);
-    if ((inst & SETB3R8) == 0b11000000) return handleSETB3R8(mem, address + 1);
+    if ((inst & 0b11111000) == RLCR8)   return handleRLCR8(mem, address + 1);
+    if ((inst & 0b11111000) == RRCR8)   return handleRRCR8(mem, address + 1);
+    if ((inst & 0b11111000) == RLR8)    return handleRLR8(mem, address + 1);
+    if ((inst & 0b11111000) == RRR8)    return handleRRR8(mem, address + 1);
+    if ((inst & 0b11111000) == SLAR8)   return handleSLAR8(mem, address + 1);
+    if ((inst & 0b11111000) == SRAR8)   return handleSRAR8(mem, address + 1);
+    if ((inst & 0b11111000) == SWAPR8)  return handleSWAPR8(mem, address + 1);
+    if ((inst & 0b11111000) == SRLR8)   return handleSRLR8(mem, address + 1);
+    if ((inst & 0b11000000) == BITB3R8) return handleBITB3R8(mem, address + 1);
+    if ((inst & 0b11000000) == RESB3R8) return handleRESB3R8(mem, address + 1);
+    if ((inst & 0b11000000) == SETB3R8) return handleSETB3R8(mem, address + 1);
     Log::d("CB: Invalid Instruction format", LOG_TAG);
-    return address + 1;
+    return address + 2;
 }
 
 uint16_t GBCPU::handleRLCR8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     R8 reg = static_cast<R8>(inst & 0b111);
-    uint8_t r8 = readR8(reg);
+    uint8_t r8 = readR8(mem, reg);
     uint8_t b7 = r8 >> 7;
     uint8_t result = (r8 << 1) + b7;
     set(f_Z, result == 0);
     set(f_N, false);
     set(f_H, false);
     set(f_C, b7);
-    storeR8(reg, result);
+    storeR8(mem, reg, result);
     Log::d("RLCR8: Rotate left " + std::to_string(r8) +
            " in r8_" + std::to_string(reg), LOG_TAG);
     return address + 1;
@@ -838,14 +874,14 @@ uint16_t GBCPU::handleRLCR8(GBMEM& mem, uint16_t address) {
 uint16_t GBCPU::handleRRCR8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     R8 reg = static_cast<R8>(inst & 0b111);
-    uint8_t r8 = readR8(reg);
+    uint8_t r8 = readR8(mem, reg);
     uint8_t b0 = r8 & 0b1;
     uint8_t result = (r8 >> 1) + (b0 << 7);
     set(f_Z, result == 0);
     set(f_N, false);
     set(f_H, false);
     set(f_C, b0);
-    storeR8(reg, result);
+    storeR8(mem, reg, result);
     Log::d("RRCR8: Rotate right " + std::to_string(r8) +
            " in r8_" + std::to_string(reg), LOG_TAG);
     return address + 1;
@@ -853,14 +889,14 @@ uint16_t GBCPU::handleRRCR8(GBMEM& mem, uint16_t address) {
 uint16_t GBCPU::handleRLR8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     R8 reg = static_cast<R8>(inst & 0b111);
-    uint8_t r8 = readR8(reg);
+    uint8_t r8 = readR8(mem, reg);
     uint8_t b7 = r8 >> 7;
     uint8_t result = (r8 << 1) + hasC();
     set(f_Z, result == 0);
     set(f_N, false);
     set(f_H, false);
     set(f_C, b7);
-    storeR8(reg, result);
+    storeR8(mem, reg, result);
     Log::d("RLR8: Rotate left " + std::to_string(r8) +
            " in r8_" + std::to_string(reg), LOG_TAG);
     return address + 1;
@@ -868,14 +904,14 @@ uint16_t GBCPU::handleRLR8(GBMEM& mem, uint16_t address) {
 uint16_t GBCPU::handleRRR8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     R8 reg = static_cast<R8>(inst & 0b111);
-    uint8_t r8 = readR8(reg);
+    uint8_t r8 = readR8(mem, reg);
     uint8_t b0 = r8 & 0b1;
     uint8_t result = (r8 >> 1) + (hasC() << 7);
     set(f_Z, result == 0);
     set(f_N, false);
     set(f_H, false);
     set(f_C, b0);
-    storeR8(reg, result);
+    storeR8(mem, reg, result);
     Log::d("RRR8: Rotate right " + std::to_string(r8) +
            " in r8_" + std::to_string(reg), LOG_TAG);
     return address + 1;
@@ -884,14 +920,14 @@ uint16_t GBCPU::handleRRR8(GBMEM& mem, uint16_t address) {
 uint16_t GBCPU::handleSLAR8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     R8 reg = static_cast<R8>(inst & 0b111);
-    uint8_t r8 = readR8(reg);
+    uint8_t r8 = readR8(mem, reg);
     uint8_t b7 = r8 >> 7;
     uint8_t result = (r8 << 1);
     set(f_Z, result == 0);
     set(f_N, false);
     set(f_H, false);
     set(f_C, b7);
-    storeR8(reg, result);
+    storeR8(mem, reg, result);
     Log::d("SLAR8: Rotate left " + std::to_string(r8) +
            " in r8_" + std::to_string(reg), LOG_TAG);
     return address + 1;
@@ -900,7 +936,7 @@ uint16_t GBCPU::handleSLAR8(GBMEM& mem, uint16_t address) {
 uint16_t GBCPU::handleSRAR8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     R8 reg = static_cast<R8>(inst & 0b111);
-    uint8_t r8 = readR8(reg);
+    uint8_t r8 = readR8(mem, reg);
     uint8_t b0 = r8 & 0b1;
     uint8_t b7 = r8 & 0b10000000;
     uint8_t result = (r8 >> 1) + b7;
@@ -908,7 +944,7 @@ uint16_t GBCPU::handleSRAR8(GBMEM& mem, uint16_t address) {
     set(f_N, false);
     set(f_H, false);
     set(f_C, b0);
-    storeR8(reg, result);
+    storeR8(mem, reg, result);
     Log::d("SRAR8: Rotate right " + std::to_string(r8) +
            " in r8_" + std::to_string(reg), LOG_TAG);
     return address + 1;
@@ -917,8 +953,8 @@ uint16_t GBCPU::handleSRAR8(GBMEM& mem, uint16_t address) {
 uint16_t GBCPU::handleSWAPR8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     R8 reg = static_cast<R8>(inst & 0b111);
-    uint8_t r8 = readR8(reg);
-    storeR8(reg, ((r8 & 0xF) << 4) + ((r8 & 0xF0) >> 4));
+    uint8_t r8 = readR8(mem, reg);
+    storeR8(mem, reg, ((r8 & 0xF) << 4) + ((r8 & 0xF0) >> 4));
     set(f_Z, r8 == 0);
     set(f_N, 0);
     set(f_H, 0);
@@ -930,14 +966,14 @@ uint16_t GBCPU::handleSWAPR8(GBMEM& mem, uint16_t address) {
 uint16_t GBCPU::handleSRLR8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     R8 reg = static_cast<R8>(inst & 0b111);
-    uint8_t r8 = readR8(reg);
+    uint8_t r8 = readR8(mem, reg);
     uint8_t b0 = r8 & 0b1;
     uint8_t result = (r8 >> 1);
     set(f_Z, result == 0);
     set(f_N, false);
     set(f_H, false);
     set(f_C, b0);
-    storeR8(reg, result);
+    storeR8(mem, reg, result);
     Log::d("SRLR8: Rotate right " + std::to_string(r8) +
            " in r8_" + std::to_string(reg), LOG_TAG);
     return address + 1;
@@ -947,7 +983,7 @@ uint16_t GBCPU::handleBITB3R8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     uint8_t bitNum = (inst & 0b00111000) >> 3;
     R8 reg = static_cast<R8>(inst & 0b111);
-    uint8_t r8 = readR8(reg);
+    uint8_t r8 = readR8(mem, reg);
     set(f_Z, !(r8 & (1 << bitNum)));
     set(f_N, 0);
     set(f_H, 1);
@@ -960,9 +996,9 @@ uint16_t GBCPU::handleRESB3R8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     uint8_t bitNum = (inst & 0b00111000) >> 3;
     R8 reg = static_cast<R8>(inst & 0b111);
-    uint8_t r8 = readR8(reg);
+    uint8_t r8 = readR8(mem, reg);
     uint8_t mask = 1 << bitNum;
-    storeR8(reg, r8 & (~mask));
+    storeR8(mem, reg, r8 & (~mask));
     Log::d("RESB3R8: Reset bit num " + std::to_string(bitNum) +
            " of r8_" + std::to_string(reg), LOG_TAG);
     return address + 1;
@@ -972,9 +1008,9 @@ uint16_t GBCPU::handleSETB3R8(GBMEM& mem, uint16_t address) {
     uint8_t inst = mem.read8(address);
     uint8_t bitNum = (inst & 0b00111000) >> 3;
     R8 reg = static_cast<R8>(inst & 0b111);
-    uint8_t r8 = readR8(reg);
+    uint8_t r8 = readR8(mem, reg);
     uint8_t mask = 1 << bitNum;
-    storeR8(reg, r8 | mask);
+    storeR8(mem, reg, r8 | mask);
     Log::d("SETB3R8: Set bit num " + std::to_string(bitNum) +
            " of r8_" + std::to_string(reg), LOG_TAG);
     return address + 1;
