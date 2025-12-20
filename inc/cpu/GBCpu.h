@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <memory/GBMemory.h>
 #include <array>
+#include <utility>
 
 class GBCPU {
       public:
@@ -34,6 +35,9 @@ class GBCPU {
             uint16_t DE() const { return de; }
             uint16_t HL() const { return hl; }
 
+            uint16_t SP() const { return sp; }
+            uint16_t PC() const { return pc; }
+
             // SETTERS
             void A(const uint8_t & val) { af = (af & 0x00FF) + (val << 8); }
             void F(const uint8_t & val) { af = (af & 0xFF00) + val; }
@@ -48,6 +52,9 @@ class GBCPU {
             void BC(const uint16_t & val) { bc = val; }
             void DE(const uint16_t & val) { de = val; }
             void HL(const uint16_t & val) { hl = val; }
+
+            void SP(const uint16_t & val) { sp = val; }
+            void PC(const uint16_t & val) { pc = val; }
 
             bool hasZ() { return af & z; }
             bool hasN() { return af & n; }
@@ -85,7 +92,8 @@ class GBCPU {
                 }
             }
           
-            uint16_t parseInstruction(GBMEM &mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> parseInstruction(GBMEM &mem, uint16_t address);
+            uint16_t step(GBMEM &mem);
 
             #define CBINSTS
             #define OP(a, b, c) a = b,
@@ -101,7 +109,7 @@ class GBCPU {
             };
             #undef OP
 
-            using Handler = uint16_t(GBCPU::*)(GBMEM&, uint16_t);
+            using Handler = std::pair<uint16_t, uint8_t>(GBCPU::*)(GBMEM&, uint16_t);
             #define OP(a, b, c) case a: return &GBCPU::handle##a;
             constexpr static Handler mapInst(InstMask m) {
                 switch (m) {
@@ -132,7 +140,8 @@ class GBCPU {
             bool lowPowerMode = false;
 
         private:
-            uint16_t af, bc, de, hl, SP, PC;
+            uint16_t af, bc, de, hl, sp, pc;
+            uint16_t idleCycles = 0;
 
             enum R8 {
                 r8_B  = 0,
@@ -188,114 +197,114 @@ class GBCPU {
 
             // INSTRUCTION HANDLERS
           
-            uint16_t handleInvalid(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleInvalid(GBMEM& mem, uint16_t address);
             // ----------------------------
             //          BLOCK 0
             // ----------------------------
-            uint16_t handleNOP(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleNOP(GBMEM& mem, uint16_t address);
 
-            uint16_t handleLDR16IMM16(GBMEM& mem, uint16_t address);
-            uint16_t handleLDR16MEMA(GBMEM& mem, uint16_t address);
-            uint16_t handleLDAR16MEM(GBMEM& mem, uint16_t address);
-            uint16_t handleLDIMM16SP(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleLDR16IMM16(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleLDR16MEMA(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleLDAR16MEM(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleLDIMM16SP(GBMEM& mem, uint16_t address);
 
-            uint16_t handleINCR16(GBMEM& mem, uint16_t address);
-            uint16_t handleDECR16(GBMEM& mem, uint16_t address);
-            uint16_t handleADDHLR16(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleINCR16(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleDECR16(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleADDHLR16(GBMEM& mem, uint16_t address);
 
-            uint16_t handleINCR8(GBMEM& mem, uint16_t address);
-            uint16_t handleDECR8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleINCR8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleDECR8(GBMEM& mem, uint16_t address);
 
-            uint16_t handleLDR8IMM8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleLDR8IMM8(GBMEM& mem, uint16_t address);
 
-            uint16_t handleRLCA(GBMEM& mem, uint16_t address);
-            uint16_t handleRRCA(GBMEM& mem, uint16_t address);
-            uint16_t handleRLA(GBMEM& mem, uint16_t address);
-            uint16_t handleRRA(GBMEM& mem, uint16_t address);
-            uint16_t handleDAA(GBMEM& mem, uint16_t address);
-            uint16_t handleCPL(GBMEM& mem, uint16_t address);
-            uint16_t handleSCFA(GBMEM& mem, uint16_t address);
-            uint16_t handleCCF(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleRLCA(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleRRCA(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleRLA(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleRRA(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleDAA(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleCPL(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleSCFA(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleCCF(GBMEM& mem, uint16_t address);
 
-            uint16_t handleJRIMM8(GBMEM& mem, uint16_t address);
-            uint16_t handleJRCONDIMM8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleJRIMM8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleJRCONDIMM8(GBMEM& mem, uint16_t address);
 
-            uint16_t handleSTOP(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleSTOP(GBMEM& mem, uint16_t address);
 
             // ----------------------------
             //          BLOCK 1
             // ----------------------------
-            uint16_t handleLDR8R8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleLDR8R8(GBMEM& mem, uint16_t address);
 
-            uint16_t handleHALT(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleHALT(GBMEM& mem, uint16_t address);
 
             // ----------------------------
             //          BLOCK 2
             // ----------------------------
-            uint16_t handleADDAR8(GBMEM& mem, uint16_t address);
-            uint16_t handleADCAR8(GBMEM& mem, uint16_t address);
-            uint16_t handleSUBAR8(GBMEM& mem, uint16_t address);
-            uint16_t handleSBCAR8(GBMEM& mem, uint16_t address);
-            uint16_t handleANDAR8(GBMEM& mem, uint16_t address);
-            uint16_t handleXORAR8(GBMEM& mem, uint16_t address);
-            uint16_t handleORAR8(GBMEM& mem, uint16_t address);
-            uint16_t handleCPAR8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleADDAR8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleADCAR8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleSUBAR8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleSBCAR8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleANDAR8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleXORAR8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleORAR8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleCPAR8(GBMEM& mem, uint16_t address);
 
             // ----------------------------
             //          BLOCK 3
             // ----------------------------
-            uint16_t handleADDAIMM8(GBMEM& mem, uint16_t address);
-            uint16_t handleADCAIMM8(GBMEM& mem, uint16_t address);
-            uint16_t handleSUBAIMM8(GBMEM& mem, uint16_t address);
-            uint16_t handleSBCAIMM8(GBMEM& mem, uint16_t address);
-            uint16_t handleANDAIMM8(GBMEM& mem, uint16_t address);
-            uint16_t handleXORAIMM8(GBMEM& mem, uint16_t address);
-            uint16_t handleORAIMM8(GBMEM& mem, uint16_t address);
-            uint16_t handleCPAIMM8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleADDAIMM8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleADCAIMM8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleSUBAIMM8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleSBCAIMM8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleANDAIMM8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleXORAIMM8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleORAIMM8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleCPAIMM8(GBMEM& mem, uint16_t address);
 
-            uint16_t handleRETCOND(GBMEM& mem, uint16_t address);
-            uint16_t handleRET(GBMEM& mem, uint16_t address);
-            uint16_t handleRETI(GBMEM& mem, uint16_t address);
-            uint16_t handleJPCONDIMM16(GBMEM& mem, uint16_t address);
-            uint16_t handleJPIMM16(GBMEM& mem, uint16_t address);
-            uint16_t handleJPHL(GBMEM& mem, uint16_t address);
-            uint16_t handleCALLCONDIMM16(GBMEM& mem, uint16_t address);
-            uint16_t handleCALLIMM16(GBMEM& mem, uint16_t address);
-            uint16_t handleRSTTGT3(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleRETCOND(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleRET(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleRETI(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleJPCONDIMM16(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleJPIMM16(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleJPHL(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleCALLCONDIMM16(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleCALLIMM16(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleRSTTGT3(GBMEM& mem, uint16_t address);
 
-            uint16_t handlePOPR16STK(GBMEM& mem, uint16_t address);
-            uint16_t handlePUSHR16STK(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handlePOPR16STK(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handlePUSHR16STK(GBMEM& mem, uint16_t address);
 
-            uint16_t handleLDHCA(GBMEM& mem, uint16_t address);
-            uint16_t handleLDHIMM8A(GBMEM& mem, uint16_t address);
-            uint16_t handleLDIMM16A(GBMEM& mem, uint16_t address);
-            uint16_t handleLDHAC(GBMEM& mem, uint16_t address);
-            uint16_t handleLDHAIMM8(GBMEM& mem, uint16_t address);
-            uint16_t handleLDAIMM16(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleLDHCA(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleLDHIMM8A(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleLDIMM16A(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleLDHAC(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleLDHAIMM8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleLDAIMM16(GBMEM& mem, uint16_t address);
 
-            uint16_t handleADDSPIMM8(GBMEM& mem, uint16_t address);
-            uint16_t handleLDHLSPIMM8(GBMEM& mem, uint16_t address);
-            uint16_t handleLDSPHL(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleADDSPIMM8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleLDHLSPIMM8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleLDSPHL(GBMEM& mem, uint16_t address);
 
-            uint16_t handleDI(GBMEM& mem, uint16_t address);
-            uint16_t handleEI(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleDI(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleEI(GBMEM& mem, uint16_t address);
 
             // ----------------------------
             //          BLOCK 4
             // ----------------------------
-            uint16_t handleCB(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleCB(GBMEM& mem, uint16_t address);
 
-            uint16_t handleRLCR8(GBMEM& mem, uint16_t address);
-            uint16_t handleRRCR8(GBMEM& mem, uint16_t address);
-            uint16_t handleRLR8(GBMEM& mem, uint16_t address);
-            uint16_t handleRRR8(GBMEM& mem, uint16_t address);
-            uint16_t handleSLAR8(GBMEM& mem, uint16_t address);
-            uint16_t handleSRAR8(GBMEM& mem, uint16_t address);
-            uint16_t handleSWAPR8(GBMEM& mem, uint16_t address);
-            uint16_t handleSRLR8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleRLCR8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleRRCR8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleRLR8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleRRR8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleSLAR8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleSRAR8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleSWAPR8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleSRLR8(GBMEM& mem, uint16_t address);
 
-            uint16_t handleBITB3R8(GBMEM& mem, uint16_t address);
-            uint16_t handleRESB3R8(GBMEM& mem, uint16_t address);
-            uint16_t handleSETB3R8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleBITB3R8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleRESB3R8(GBMEM& mem, uint16_t address);
+            std::pair<uint16_t, uint8_t> handleSETB3R8(GBMEM& mem, uint16_t address);
 };
 
