@@ -14,11 +14,15 @@ std::pair<uint16_t, uint8_t> GBCPU::parseInstruction(GBMEM& mem, uint16_t addres
 }
 
 uint16_t GBCPU::step(GBMEM &mem) {
-    if (lowPowerMode) return 0;
+    if (lowPowerMode) return 1;
+    if (IME_scheduled == 2) {
+        IME = true;
+        IME_scheduled = 0;
+    }
+    if (IME_scheduled == 1) IME_scheduled++;
     auto ret = parseInstruction(mem, PC());
     PC(ret.first);
-    idleCycles = ret.second;
-    return 0;
+    return ret.second;
 }
 
 std::pair<uint16_t, uint8_t> GBCPU::handleInvalid(GBMEM& mem, uint16_t address) {
@@ -376,7 +380,11 @@ std::pair<uint16_t, uint8_t> GBCPU::handleHALT(GBMEM& , uint16_t address) {
     // TODO: Handle this instruction along with STOP
     //       Need to handle interrupts
     Log::d("HALT Instruction", LOG_TAG);
-    lowPowerMode = true;
+    if (IME) {
+        lowPowerMode = true;
+    } else if (IME) {
+    } else {
+    }
     return { address + 1, 0 };
 }
 

@@ -17,6 +17,7 @@ include_directories(inc)
 # ---------------------
 file(GLOB_RECURSE CORE_SOURCES 
     src/cpu/*.cpp
+    src/memory/*.cpp
 )
 
 add_library(GBCore STATIC ${CORE_SOURCES})
@@ -53,9 +54,20 @@ target_compile_options(imgui PRIVATE -w)
 # ---------------------
 # Emulator executable
 # ---------------------
+file(GLOB_RECURSE EMU_SOURCES
+    src/ppu/*.cpp
+)
+
 add_executable(GBEmulator 
     src/main.cpp
+    ${EMU_SOURCES}
 )
+
+target_include_directories(GBEmulator
+    PUBLIC
+        inc/ppu   
+)
+
 target_compile_options(GBEmulator PRIVATE -Wall -Wextra -Wpedantic)
 
 target_link_libraries(GBEmulator 
